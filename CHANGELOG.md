@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-netopia-payments` will be documented in this file.
 
+## 0.0.4 - 2025-05-25
+
+- **CRITICAL FIX**: Changed cipher algorithm from AES256 to RC4 to match Netopia's official implementation
+- Removed IV parameter which is not required for RC4 cipher
+- Updated all form templates and controllers to use the correct cipher parameter
+
 ## 0.0.3 - 2025-05-25
 
 - Added parameter validation to ensure all required parameters (env_key, data, iv) are present

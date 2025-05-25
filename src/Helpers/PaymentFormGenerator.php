@@ -51,7 +51,7 @@ class PaymentFormGenerator
             'paymentUrl' => $paymentData['url'],
             'envKey' => $paymentData['env_key'],
             'data' => $paymentData['data'],
-            'iv' => $paymentData['iv'],
+            'cipher' => $paymentData['cipher'] ?? 'RC4',
         ]);
     }
     
@@ -103,7 +103,7 @@ class PaymentFormGenerator
         $html = '<form id="' . $formId . '" action="' . $paymentData['url'] . '" method="post" target="_blank" style="display:none;">';
         $html .= '<input type="hidden" name="env_key" value="' . $paymentData['env_key'] . '">';
         $html .= '<input type="hidden" name="data" value="' . $paymentData['data'] . '">';
-        $html .= '<input type="hidden" name="iv" value="' . $paymentData['iv'] . '">';
+        $html .= '<input type="hidden" name="cipher" value="' . ($paymentData['cipher'] ?? 'RC4') . '">';
         $html .= '</form>';
         $html .= '<button type="button" onclick="document.getElementById(\'' . $formId . '\').submit();" class="netopia-payment-button">' . $buttonText . '</button>';
         

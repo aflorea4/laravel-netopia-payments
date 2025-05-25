@@ -207,12 +207,11 @@ class NetopiaPayments
         // Encrypt the data
         $encryptedData = '';
         $envKeys = [];
-        $iv = '';
-        // Generate a random IV for AES256 cipher
-        $ivLength = openssl_cipher_iv_length('AES256');
-        $iv = openssl_random_pseudo_bytes($ivLength);
         
-        if (!openssl_seal($data, $encryptedData, $envKeys, [$publicKey], 'AES256', $iv)) {
+        // Use RC4 cipher as per Netopia's official implementation
+        $cipher = 'RC4';
+        
+        if (!openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $cipher)) {
             throw new Exception('Could not encrypt data');
         }
 
@@ -223,7 +222,7 @@ class NetopiaPayments
         return [
             'env_key' => base64_encode($envKeys[0]),
             'data' => base64_encode($encryptedData),
-            'iv' => base64_encode($iv),
+            'cipher' => $cipher,
         ];
     }
 
@@ -232,18 +231,15 @@ class NetopiaPayments
      *
      * @param string $envKey
      * @param string $data
-     * @param string|null $iv
+     * @param string|null $cipher
      * @return string
      * @throws Exception
      */
-    protected function decrypt(string $envKey, string $data, string $iv = null)
+    protected function decrypt(string $envKey, string $data, string $cipher = 'RC4')
     {
         // Decode the data
         $envKey = base64_decode($envKey);
         $data = base64_decode($data);
-        if ($iv !== null) {
-            $iv = base64_decode($iv);
-        }
 
         // Read the private key
         $privateKey = openssl_pkey_get_private(file_get_contents($this->privateKeyPath));
@@ -253,8 +249,8 @@ class NetopiaPayments
 
         // Decrypt the data
         $decryptedData = '';
-        if (!openssl_open($data, $decryptedData, $envKey, $privateKey, 'AES256', $iv)) {
-            throw new Exception('Could not decrypt data');
+        if (!openssl_open($data, $decryptedData, $envKey, $privateKey, $cipher)) {
+            throw new Exception('Could not decrypt data. Please ensure all required parameters are provided correctly.');
         }
 
         // Free the key
@@ -269,14 +265,14 @@ class NetopiaPayments
      *
      * @param string $envKey
      * @param string $data
-     * @param string|null $iv
+     * @param string|null $cipher
      * @return Response
      * @throws Exception
      */
-    public function processResponse(string $envKey, string $data, string $iv = null)
+    public function processResponse(string $envKey, string $data, string $cipher = 'RC4')
     {
         // Decrypt the data
-        $decryptedData = $this->decrypt($envKey, $data, $iv);
+        $decryptedData = $this->decrypt($envKey, $data, $cipher);
 
         // Parse the XML
         $xmlDoc = new DOMDocument();

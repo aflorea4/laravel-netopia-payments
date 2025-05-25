@@ -94,11 +94,11 @@ $paymentData = NetopiaPayments::createPaymentRequest(
 // The payment data contains:
 // - env_key: The encrypted envelope key (REQUIRED)
 // - data: The encrypted payment data (REQUIRED)
-// - iv: The initialization vector for decryption (REQUIRED)
+// - cipher: The cipher algorithm used for encryption (REQUIRED, defaults to 'RC4')
 // - url: The payment URL (sandbox or live)
 //
-// IMPORTANT: All three parameters (env_key, data, and iv) must be included in your payment form
-// submission to Netopia. Missing any of these will result in a 500 error from Netopia's server.
+// IMPORTANT: Both parameters (env_key and data) must be included in your payment form
+// submission to Netopia. The cipher parameter should be set to 'RC4' to match Netopia's implementation.
 
 // Redirect to the payment page
 return view('payment.redirect', [
