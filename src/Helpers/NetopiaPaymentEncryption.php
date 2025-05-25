@@ -11,8 +11,11 @@ use Felix\RC4\RC4 as FelixRC4;
  */
 class NetopiaPaymentEncryption
 {
+    // Error constants
+    const ERROR_REQUIRED_CIPHER_NOT_AVAILABLE = 1;
+    
     /**
-     * Encrypt data using RC4 algorithm
+     * Encrypt data using appropriate algorithm based on PHP version
      *
      * @param string $data The data to encrypt
      * @param string $signature The Netopia merchant signature
@@ -22,7 +25,64 @@ class NetopiaPaymentEncryption
      */
     public static function encrypt($data, $signature, $publicKeyPath)
     {
-        // First try built-in RC4 if available
+        // Determine which cipher to use based on PHP version
+        $cipher = 'rc4'; // Default cipher
+        
+        // For PHP 7.0+ use AES-256-CBC if OpenSSL version is high enough
+        if (PHP_VERSION_ID >= 70000) {
+            if (OPENSSL_VERSION_NUMBER > 0x10000000) {
+                $cipher = 'aes-256-cbc';
+            }
+        } else {
+            // For older PHP versions with newer OpenSSL, throw an error
+            if (OPENSSL_VERSION_NUMBER >= 0x30000000) {
+                $errorMessage = 'Incompatible configuration PHP ' . PHP_VERSION . ' & ' . OPENSSL_VERSION_TEXT;
+                throw new Exception($errorMessage, self::ERROR_REQUIRED_CIPHER_NOT_AVAILABLE);
+            }
+        }
+        
+        // Use AES-256-CBC for PHP 7.0+
+        if ($cipher === 'aes-256-cbc' && in_array('aes-256-cbc', openssl_get_cipher_methods())) {
+            try {
+                // Read the public key
+                $publicKey = openssl_pkey_get_public(file_get_contents($publicKeyPath));
+                if ($publicKey === false) {
+                    throw new Exception('Could not read public key');
+                }
+                
+                // Generate a random IV
+                $iv = openssl_random_pseudo_bytes(16);
+                
+                // Generate a random key for AES
+                $aesKey = openssl_random_pseudo_bytes(32); // 256 bits
+                
+                // Encrypt data with AES
+                $encryptedData = openssl_encrypt($data, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
+                if ($encryptedData === false) {
+                    throw new Exception('AES encryption failed: ' . openssl_error_string());
+                }
+                
+                // Encrypt the AES key with the public key
+                $encryptedKey = '';
+                if (!openssl_public_encrypt($aesKey, $encryptedKey, $publicKey, OPENSSL_PKCS1_PADDING)) {
+                    throw new Exception('Failed to encrypt AES key: ' . openssl_error_string());
+                }
+                
+                // Free the key
+                @openssl_free_key($publicKey);
+                
+                return [
+                    'env_key' => base64_encode($encryptedKey),
+                    'data' => base64_encode($encryptedData),
+                    'cipher' => 'aes-256-cbc',
+                    'iv' => base64_encode($iv)
+                ];
+            } catch (Exception $e) {
+                // If AES fails, continue with RC4 as fallback
+            }
+        }
+        
+        // Try built-in RC4 if available
         if (in_array('rc4', openssl_get_cipher_methods())) {
             try {
                 // Read the public key
@@ -52,7 +112,7 @@ class NetopiaPaymentEncryption
             }
         }
         
-        // Use Felix RC4 implementation as a fallback
+        // Use Felix RC4 implementation as a last fallback
         try {
             // Create a signature-based key for security
             $key = 'Netopia_' . $signature . '_Key';
@@ -72,18 +132,58 @@ class NetopiaPaymentEncryption
     }
     
     /**
-     * Decrypt data using RC4 algorithm
+     * Decrypt data using the appropriate algorithm
      *
      * @param string $envKey The envelope key (base64 encoded)
      * @param string $data The encrypted data (base64 encoded)
      * @param string $signature The Netopia merchant signature
      * @param string $privateKeyPath Path to the private key file
      * @param string $cipher The cipher used for encryption
+     * @param string|null $iv The initialization vector for AES (base64 encoded)
      * @return string The decrypted data
      * @throws Exception
      */
-    public static function decrypt($envKey, $data, $signature, $privateKeyPath, $cipher = 'rc4')
+    public static function decrypt($envKey, $data, $signature, $privateKeyPath, $cipher = 'rc4', $iv = null)
     {
+        // Handle AES-256-CBC
+        if ($cipher === 'aes-256-cbc' && in_array('aes-256-cbc', openssl_get_cipher_methods())) {
+            try {
+                // Decode the base64 encoded data
+                $encryptedKey = base64_decode($envKey);
+                $encryptedData = base64_decode($data);
+                $iv = base64_decode($iv);
+                
+                if (empty($iv) || strlen($iv) !== 16) {
+                    throw new Exception('Invalid initialization vector for AES-256-CBC');
+                }
+                
+                // Read the private key
+                $privateKey = openssl_pkey_get_private(file_get_contents($privateKeyPath));
+                if ($privateKey === false) {
+                    throw new Exception('Could not read private key');
+                }
+                
+                // Decrypt the AES key with the private key
+                $aesKey = '';
+                if (!openssl_private_decrypt($encryptedKey, $aesKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
+                    throw new Exception('Failed to decrypt AES key: ' . openssl_error_string());
+                }
+                
+                // Free the key
+                @openssl_free_key($privateKey);
+                
+                // Decrypt the data with AES
+                $decryptedData = openssl_decrypt($encryptedData, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
+                if ($decryptedData === false) {
+                    throw new Exception('AES decryption failed: ' . openssl_error_string());
+                }
+                
+                return $decryptedData;
+            } catch (Exception $e) {
+                // If AES decryption fails, continue with other methods
+            }
+        }
+        
         // Handle built-in RC4
         if ($cipher === 'rc4' && in_array('rc4', openssl_get_cipher_methods())) {
             try {

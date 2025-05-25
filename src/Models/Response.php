@@ -45,6 +45,34 @@ class Response
      * @var float
      */
     public $originalAmount;
+    
+    /**
+     * The timestamp
+     *
+     * @var string
+     */
+    public $timestamp;
+    
+    /**
+     * The invoice ID
+     *
+     * @var string
+     */
+    public $invoiceId;
+    
+    /**
+     * The invoice amount
+     *
+     * @var float
+     */
+    public $invoiceAmount;
+    
+    /**
+     * The invoice currency
+     *
+     * @var string
+     */
+    public $invoiceCurrency;
 
     /**
      * Check if the payment was successful

@@ -173,71 +173,107 @@ class NetopiaPayments
         $encryptedData = NetopiaPaymentEncryption::encrypt($xmlString, $this->signature, $this->publicKeyPath);
 
         // Return the payment form data
-        return [
+        $result = [
             'url' => $this->getPaymentUrl(),
             'env_key' => $encryptedData['env_key'],
             'data' => $encryptedData['data'],
             'cipher' => $encryptedData['cipher'],
         ];
+        
+        // Add IV if using AES-256-CBC
+        if ($encryptedData['cipher'] === 'aes-256-cbc' && isset($encryptedData['iv'])) {
+            $result['iv'] = $encryptedData['iv'];
+        }
+        
+        return $result;
     }
 
     /**
-     * Process the payment response
+     * Process the response from Netopia Payments
      *
-     * @param string $envKey
-     * @param string $data
-     * @param string $cipher
-     * @return Response
-     * @throws Exception
+     * @param string $envKey The envelope key
+     * @param string $data The encrypted data
+     * @param string $cipher The cipher used for encryption
+     * @param string|null $errorCode The error code if any
+     * @param string|null $iv The initialization vector (for AES-256-CBC)
+     * @return Response The response object
      */
-    public function processResponse($envKey, $data, $cipher = 'rc4')
+    public function processResponse($envKey, $data, $cipher = 'rc4', $errorCode = null, $iv = null)
     {
-        // Decrypt the data
-        $decryptedData = NetopiaPaymentEncryption::decrypt(
-            $envKey,
-            $data,
-            $this->signature,
-            $this->privateKeyPath,
-            $cipher
-        );
-
-        // Parse the XML
-        $xmlDoc = new DOMDocument();
-        $xmlDoc->loadXML($decryptedData);
-
-        // Create a new response object
         $response = new Response();
-
-        // Get the order element
-        $orderElem = $xmlDoc->getElementsByTagName('order')->item(0);
-        $response->orderId = $orderElem->getAttribute('id');
-
-        // Get the mobilpay element
-        $mobilpayElem = $xmlDoc->getElementsByTagName('mobilpay')->item(0);
         
-        // Get the action
-        $actionElem = $mobilpayElem->getElementsByTagName('action')->item(0);
-        $response->action = $actionElem->nodeValue;
-
-        // Get the error element if it exists
-        $errorElem = $mobilpayElem->getElementsByTagName('error')->item(0);
-        if ($errorElem) {
-            $response->errorCode = $errorElem->getAttribute('code');
-            $response->errorMessage = $errorElem->nodeValue;
+        // Handle error case
+        if (!empty($errorCode)) {
+            $response->errorCode = $errorCode;
+            return $response;
         }
-
-        // Get the processed amount
-        $processedAmountElem = $mobilpayElem->getElementsByTagName('processed_amount')->item(0);
-        if ($processedAmountElem) {
-            $response->processedAmount = (float) $processedAmountElem->nodeValue;
+        
+        try {
+            // Decrypt the data
+            $decryptedData = NetopiaPaymentEncryption::decrypt(
+                $envKey,
+                $data,
+                $this->signature,
+                $this->privateKeyPath,
+                $cipher,
+                $iv
+            );
+            
+            // Parse the XML data
+            $xmlDoc = new DOMDocument();
+            $xmlDoc->loadXML($decryptedData);
+            
+            // Get the order element
+            $orderElem = $xmlDoc->getElementsByTagName('order')->item(0);
+            $response->orderId = $orderElem->getAttribute('id');
+            
+            // Get the mobilpay element
+            $mobilpayElem = $xmlDoc->getElementsByTagName('mobilpay')->item(0);
+            
+            // Get the action
+            $actionElem = $mobilpayElem->getElementsByTagName('action')->item(0);
+            if ($actionElem) {
+                $response->action = $actionElem->nodeValue;
+            }
+            
+            // Get the error element if it exists
+            $errorElem = $mobilpayElem->getElementsByTagName('error')->item(0);
+            if ($errorElem) {
+                $response->errorCode = $errorElem->getAttribute('code');
+                $response->errorMessage = $errorElem->nodeValue;
+            }
+            
+            // Get the timestamp if it exists
+            $timestampElem = $mobilpayElem->getElementsByTagName('timestamp')->item(0);
+            if ($timestampElem) {
+                $response->timestamp = $timestampElem->nodeValue;
+            }
+            
+            // Get the processed amount
+            $processedAmountElem = $mobilpayElem->getElementsByTagName('processed_amount')->item(0);
+            if ($processedAmountElem) {
+                $response->processedAmount = (float) $processedAmountElem->nodeValue;
+            }
+            
+            // Get the original amount
+            $originalAmountElem = $mobilpayElem->getElementsByTagName('original_amount')->item(0);
+            if ($originalAmountElem) {
+                $response->originalAmount = (float) $originalAmountElem->nodeValue;
+            }
+            
+            // Get the invoice details if they exist
+            $invoiceElem = $xmlDoc->getElementsByTagName('invoice')->item(0);
+            if ($invoiceElem) {
+                $response->invoiceId = $invoiceElem->getAttribute('id');
+                $response->invoiceAmount = (float) $invoiceElem->getAttribute('amount');
+                $response->invoiceCurrency = $invoiceElem->getAttribute('currency');
+            }
+            
+        } catch (Exception $e) {
+            $response->errorCode = 'ERR999';
+            $response->errorMessage = $e->getMessage();
         }
-
-        // Get the original amount
-        $originalAmountElem = $mobilpayElem->getElementsByTagName('original_amount')->item(0);
-        if ($originalAmountElem) {
-            $response->originalAmount = (float) $originalAmountElem->nodeValue;
-        }
-
+        
         return $response;
     }
 

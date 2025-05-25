@@ -14,7 +14,8 @@
         "illuminate/support": "^8.0|^9.0|^10.0",
         "ext-openssl": "*",
         "ext-dom": "*",
-        "felixdorn/php-rc4": "^0.1.0"
+        "felixdorn/php-rc4": "^0.1.0",
+        "guzzlehttp/guzzle": "^7.9"
     },
     "require-dev": {
         "orchestra/testbench": "^6.0|^7.0|^8.0",

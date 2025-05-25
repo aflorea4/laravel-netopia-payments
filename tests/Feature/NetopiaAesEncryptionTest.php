@@ -1,0 +1,214 @@
+<?php
+
+use Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption;
+use Illuminate\Support\Facades\Config;
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+
+beforeEach(function () {
+    // Mock the Config facade to use our test certificates
+    Config::shouldReceive('get')
+        ->with('netopia.signature')
+        ->andReturn('2VXM-Q4WB-F8UL-MRU6-PWP3');
+    
+    Config::shouldReceive('get')
+        ->with('netopia.public_key_path')
+        ->andReturn(__DIR__ . '/../certs/public.cer');
+    
+    Config::shouldReceive('get')
+        ->with('netopia.private_key_path')
+        ->andReturn(__DIR__ . '/../certs/private.key');
+    
+    Config::shouldReceive('get')
+        ->with('netopia.live_mode', false)
+        ->andReturn(false);
+    
+    Config::shouldReceive('get')
+        ->with('netopia.default_currency', 'RON')
+        ->andReturn('RON');
+        
+    // Mock additional Config calls that might be needed
+    Config::shouldReceive('get')
+        ->withAnyArgs()
+        ->andReturn(null);
+});
+
+it('can encrypt and decrypt data using AES-256-CBC', function () {
+    // Skip this test if PHP version is less than 7.0
+    if (PHP_VERSION_ID < 70000) {
+        $this->markTestSkipped('AES-256-CBC encryption is only supported in PHP 7.0+');
+    }
+    
+    // Skip this test if OpenSSL version is too low
+    if (OPENSSL_VERSION_NUMBER <= 0x10000000) {
+        $this->markTestSkipped('AES-256-CBC encryption requires OpenSSL > 1.0.0');
+    }
+    
+    // Test with a simple string instead of XML
+    $testData = 'This is a test string for AES-256-CBC encryption';
+    
+    // Generate a random key and IV
+    $key = openssl_random_pseudo_bytes(32); // 256 bits for AES-256
+    $iv = openssl_random_pseudo_bytes(16);  // 128 bits for AES block size
+    
+    // Encrypt with OpenSSL directly
+    $encrypted = openssl_encrypt($testData, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    expect($encrypted)->not->toBeFalse();
+    
+    // Decrypt with OpenSSL directly
+    $decrypted = openssl_decrypt($encrypted, 'aes-256-cbc', $key, OPENSSL_RAW_DATA, $iv);
+    expect($decrypted)->toBe($testData);
+    
+    // Now test that our implementation can use AES-256-CBC
+    // Create a Netopia Payments instance
+    $netopiaPayments = new Aflorea4\NetopiaPayments\NetopiaPayments();
+    
+    // Create a payment request
+    $orderId = 'TEST-AES-ENCRYPT-' . time();
+    $amount = 100.00;
+    $currency = 'RON';
+    $returnUrl = 'https://example.com/return';
+    $confirmUrl = 'https://example.com/confirm';
+    
+    $billingDetails = [
+        'firstName' => 'Test',
+        'lastName' => 'User',
+        'email' => 'test@example.com',
+    ];
+    
+    // Generate the payment data
+    $paymentData = $netopiaPayments->createPaymentRequest(
+        $orderId,
+        $amount,
+        $currency,
+        $returnUrl,
+        $confirmUrl,
+        $billingDetails,
+        'Test AES encryption'
+    );
+    
+    // Verify we're using AES-256-CBC
+    expect($paymentData['cipher'])->toBe('aes-256-cbc');
+    expect($paymentData)->toHaveKey('iv');
+    
+    // Verify all data is properly encoded
+    expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
+    expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
+    expect(base64_decode($paymentData['iv'], true))->not->toBeFalse();
+});
+
+it('verifies payment data structure with AES encryption', function () {
+    // Create a Netopia Payments instance
+    $netopiaPayments = new Aflorea4\NetopiaPayments\NetopiaPayments();
+    
+    // Create a payment request
+    $orderId = 'TEST-AES-' . time();
+    $amount = 100.00;
+    $currency = 'RON';
+    $returnUrl = 'https://example.com/return';
+    $confirmUrl = 'https://example.com/confirm';
+    
+    $billingDetails = [
+        'firstName' => 'Test',
+        'lastName' => 'User',
+        'email' => 'test@example.com',
+        'phone' => '1234567890',
+        'address' => '123 Test St',
+    ];
+    
+    // Generate the payment data
+    $paymentData = $netopiaPayments->createPaymentRequest(
+        $orderId,
+        $amount,
+        $currency,
+        $returnUrl,
+        $confirmUrl,
+        $billingDetails,
+        'Test payment with AES'
+    );
+    
+    // Verify the payment data structure
+    expect($paymentData)->toBeArray();
+    expect($paymentData)->toHaveKeys(['url', 'env_key', 'data', 'cipher']);
+    
+    // Check if we're using AES-256-CBC (for PHP 7.0+)
+    if (PHP_VERSION_ID >= 70000 && OPENSSL_VERSION_NUMBER > 0x10000000) {
+        expect($paymentData['cipher'])->toBe('aes-256-cbc');
+        expect($paymentData)->toHaveKey('iv');
+        
+        // Verify the data is properly encoded
+        expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
+        expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
+        expect(base64_decode($paymentData['iv'], true))->not->toBeFalse();
+    } else {
+        // For older PHP versions, we should be using RC4
+        expect($paymentData['cipher'])->toBeIn(['rc4', 'felix-rc4']);
+        
+        // Verify the data is properly encoded
+        expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
+        expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
+    }
+    
+    // Verify the URL is for the sandbox environment
+    expect($paymentData['url'])->toContain('sandboxsecure.mobilpay.ro');
+});
+
+it('can build a valid payment form with AES encryption', function () {
+    // Skip if we can't use AES
+    if (PHP_VERSION_ID < 70000 || OPENSSL_VERSION_NUMBER <= 0x10000000) {
+        $this->markTestSkipped('AES-256-CBC encryption requires PHP 7.0+ and OpenSSL > 1.0.0');
+    }
+    
+    // Create a Netopia Payments instance
+    $netopiaPayments = new Aflorea4\NetopiaPayments\NetopiaPayments();
+    
+    // Create a payment request
+    $orderId = 'TEST-FORM-' . time();
+    $amount = 100.00;
+    $currency = 'RON';
+    $returnUrl = 'https://example.com/return';
+    $confirmUrl = 'https://example.com/confirm';
+    
+    $billingDetails = [
+        'firstName' => 'Test',
+        'lastName' => 'User',
+        'email' => 'test@example.com',
+        'phone' => '1234567890',
+        'address' => '123 Test St',
+    ];
+    
+    // Generate the payment data
+    $paymentData = $netopiaPayments->createPaymentRequest(
+        $orderId,
+        $amount,
+        $currency,
+        $returnUrl,
+        $confirmUrl,
+        $billingDetails,
+        'Test payment form with AES'
+    );
+    
+    // Verify we're using AES-256-CBC
+    expect($paymentData['cipher'])->toBe('aes-256-cbc');
+    expect($paymentData)->toHaveKey('iv');
+    
+    // Build a payment form HTML
+    $formHtml = '<form id="netopia-form" action="' . $paymentData['url'] . '" method="post">';
+    $formHtml .= '<input type="hidden" name="env_key" value="' . $paymentData['env_key'] . '">';
+    $formHtml .= '<input type="hidden" name="data" value="' . $paymentData['data'] . '">';
+    $formHtml .= '<input type="hidden" name="cipher" value="' . $paymentData['cipher'] . '">';
+    
+    if (isset($paymentData['iv'])) {
+        $formHtml .= '<input type="hidden" name="iv" value="' . $paymentData['iv'] . '">';
+    }
+    
+    $formHtml .= '<button type="submit">Pay Now</button>';
+    $formHtml .= '</form>';
+    
+    // Verify the form contains all required elements
+    expect($formHtml)->toContain('action="' . $paymentData['url'] . '"');
+    expect($formHtml)->toContain('name="env_key" value="' . $paymentData['env_key'] . '"');
+    expect($formHtml)->toContain('name="data" value="' . $paymentData['data'] . '"');
+    expect($formHtml)->toContain('name="cipher" value="aes-256-cbc"');
+    expect($formHtml)->toContain('name="iv" value="' . $paymentData['iv'] . '"');
+});
