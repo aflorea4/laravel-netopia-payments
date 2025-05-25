@@ -1,23 +1,28 @@
 <?php
 
+use Aflorea4\NetopiaPayments\Facades\NetopiaPayments;
 use Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption;
+use Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentHelper;
+use Aflorea4\NetopiaPayments\Models\Request;
+use Aflorea4\NetopiaPayments\Models\Invoice;
+use Aflorea4\NetopiaPayments\Models\BillingAddress;
 use Illuminate\Support\Facades\Config;
-use GuzzleHttp\Client;
-use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Http;
+use Tests\TestHelper;
 
 beforeEach(function () {
     // Mock the Config facade to use our test certificates
     Config::shouldReceive('get')
         ->with('netopia.signature')
-        ->andReturn('2VXM-Q4WB-F8UL-MRU6-PWP3');
+        ->andReturn(TestHelper::getTestSignature());
     
     Config::shouldReceive('get')
         ->with('netopia.public_key_path')
-        ->andReturn(__DIR__ . '/../certs/public.cer');
+        ->andReturn(TestHelper::getTestPublicKeyPath());
     
     Config::shouldReceive('get')
         ->with('netopia.private_key_path')
-        ->andReturn(__DIR__ . '/../certs/private.key');
+        ->andReturn(TestHelper::getTestPrivateKeyPath());
     
     Config::shouldReceive('get')
         ->with('netopia.live_mode', false)
