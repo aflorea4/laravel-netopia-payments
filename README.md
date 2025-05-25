@@ -3,7 +3,9 @@
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
 [![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/aflorea4/laravel-netopia-payments/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/aflorea4/laravel-netopia-payments/actions?query=workflow%3Atests+branch%3Amain)
 [![Total Downloads](https://img.shields.io/packagist/dt/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
-[![License](https://img.shields.io/packagist/l/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
+[![GitHub License](https://img.shields.io/github/license/aflorea4/laravel-netopia-payments?style=flat-square)](https://github.com/aflorea4/laravel-netopia-payments/blob/main/LICENSE.md)
+[![PHP Version](https://img.shields.io/packagist/php-v/aflorea4/laravel-netopia-payments?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
+[![GitHub Release Date](https://img.shields.io/github/release-date/aflorea4/laravel-netopia-payments?style=flat-square)](https://github.com/aflorea4/laravel-netopia-payments/releases)
 
 A Laravel package for integrating with Netopia Payments (Romania) payment gateway.
 
