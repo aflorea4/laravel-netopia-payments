@@ -2,6 +2,12 @@
 
 All notable changes to `laravel-netopia-payments` will be documented in this file.
 
+## 0.0.5 - 2025-05-25
+
+- **CRITICAL FIX**: Added support for multiple cipher algorithms to handle RC4 deprecation in newer PHP versions
+- Updated encryption and decryption methods to automatically fall back to supported ciphers (AES-128-CBC, AES-256-CBC, BF-CBC)
+- Enhanced error handling with more descriptive error messages
+
 ## 0.0.4 - 2025-05-25
 
 - **CRITICAL FIX**: Changed cipher algorithm from AES256 to RC4 to match Netopia's official implementation

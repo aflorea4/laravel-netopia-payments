@@ -49,7 +49,7 @@ class NetopiaPaymentController extends Controller
             $cipher = $request->input('cipher', 'RC4');
 
             // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data, $cipher);
+            $response = NetopiaPayments::processResponse($envKey, $data, $cipher, $iv);
 
             // Log the payment response
             Log::info('Netopia payment response', [
@@ -132,7 +132,7 @@ class NetopiaPaymentController extends Controller
             $cipher = $request->input('cipher', 'RC4');
 
             // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data, $cipher);
+            $response = NetopiaPayments::processResponse($envKey, $data, $cipher, $iv);
 
             // Redirect based on the payment status
             if ($response->isSuccessful() || $response->isPaid()) {
