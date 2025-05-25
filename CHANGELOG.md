@@ -2,7 +2,7 @@
 
 All notable changes to `laravel-netopia-payments` will be documented in this file.
 
-## 1.0.0 - 2025-05-25
+## 0.0.1 - 2025-05-25
 
 - Initial release
 - Support for Netopia Payments integration with Laravel
