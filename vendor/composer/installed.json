@@ -823,6 +823,59 @@
             "install-path": "../fakerphp/faker"
         },
         {
+            "name": "felixdorn/php-rc4",
+            "version": "0.1.0",
+            "version_normalized": "0.1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/felixdorn/php-rc4.git",
+                "reference": "ac2ecf4b876b794bf61cdf56e7baba0b04a54caf"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/felixdorn/php-rc4/zipball/ac2ecf4b876b794bf61cdf56e7baba0b04a54caf",
+                "reference": "ac2ecf4b876b794bf61cdf56e7baba0b04a54caf",
+                "shasum": ""
+            },
+            "require": {
+                "ext-mbstring": "*",
+                "php": "^8.3"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.14",
+                "pestphp/pest": "^2.34",
+                "phpstan/phpstan": "^1.10",
+                "symfony/var-dumper": "^7"
+            },
+            "time": "2024-03-21T12:43:38+00:00",
+            "type": "library",
+            "installation-source": "dist",
+            "autoload": {
+                "files": [
+                    "src/helpers.php"
+                ],
+                "psr-4": {
+                    "Felix\\RC4\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Félix Dorn",
+                    "email": "github@felixdorn.fr"
+                }
+            ],
+            "description": " RC4/ARC4 encryption/decryption library for PHP. ",
+            "support": {
+                "issues": "https://github.com/felixdorn/php-rc4/issues",
+                "source": "https://github.com/felixdorn/php-rc4/tree/0.1.0"
+            },
+            "install-path": "../felixdorn/php-rc4"
+        },
+        {
             "name": "fidry/cpu-core-counter",
             "version": "1.2.0",
             "version_normalized": "1.2.0.0",

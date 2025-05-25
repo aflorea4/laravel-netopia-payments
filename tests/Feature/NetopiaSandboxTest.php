@@ -72,126 +72,58 @@ it('can generate payment form data for a 1.0 RON transaction', function () {
     // The cipher should be specified
     expect($paymentData['cipher'])->toBeString();
     
-    // Log the payment data for debugging
-    echo "\nPayment Form Data:\n";
-    echo "URL: " . $paymentData['url'] . "\n";
-    echo "ENV_KEY: " . $paymentData['env_key'] . "\n";
-    echo "DATA: " . $paymentData['data'] . "\n";
-    echo "CIPHER: " . $paymentData['cipher'] . "\n";
+    // Store payment data for verification (no echo statements to avoid risky test warnings)
+    $paymentInfo = [
+        'url' => $paymentData['url'],
+        'env_key' => $paymentData['env_key'],
+        'data' => $paymentData['data'],
+        'cipher' => $paymentData['cipher']
+    ];
+    
     if (isset($paymentData['iv'])) {
-        echo "IV: " . $paymentData['iv'] . "\n";
+        $paymentInfo['iv'] = $paymentData['iv'];
     }
+    
+    // Additional assertions on the payment info
+    expect($paymentInfo['url'])->toContain('sandboxsecure.mobilpay.ro');
+    expect(base64_decode($paymentInfo['env_key'], true))->not->toBeFalse();
+    expect(base64_decode($paymentInfo['data'], true))->not->toBeFalse();
 });
 
-it('can encrypt and decrypt data with the current cipher settings', function () {
+it('can encrypt and decrypt data with our NetopiaPaymentEncryption helper', function () {
     // Create some test XML data
     $testData = '<?xml version="1.0" encoding="utf-8"?><order><signature>NETOPIA</signature><amount>1.00</amount><currency>RON</currency></order>';
     
-    // Use reflection to access the protected encrypt method
-    $netopiaPayments = new ReflectionClass(Aflorea4\NetopiaPayments\NetopiaPayments::class);
-    $encrypt = $netopiaPayments->getMethod('encrypt');
-    $encrypt->setAccessible(true);
+    // Use our NetopiaPaymentEncryption helper
+    $signature = 'NETOPIA';
+    $publicKeyPath = __DIR__ . '/../certs/public.cer';
+    $privateKeyPath = __DIR__ . '/../certs/private.key';
     
-    $decrypt = $netopiaPayments->getMethod('decrypt');
-    $decrypt->setAccessible(true);
+    // Encrypt the data
+    $encryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::encrypt(
+        $testData,
+        $signature,
+        $publicKeyPath
+    );
     
-    // Create an instance of NetopiaPayments
-    $instance = $netopiaPayments->newInstance();
+    // Verify the encrypted data structure
+    expect($encryptedData)->toBeArray();
+    expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher']);
     
-    // Try with specific ciphers that are available in PHP
-    $ciphers = ['aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
-    $success = false;
+    // Decrypt the data
+    $decryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::decrypt(
+        $encryptedData['env_key'],
+        $encryptedData['data'],
+        $signature,
+        $privateKeyPath,
+        $encryptedData['cipher']
+    );
     
-    foreach ($ciphers as $testCipher) {
-        echo "\nTesting with cipher: $testCipher\n";
-        
-        try {
-            // Force a specific cipher for testing
-            $encryptMethod = new ReflectionMethod(Aflorea4\NetopiaPayments\NetopiaPayments::class, 'encrypt');
-            $encryptMethod->setAccessible(true);
-            
-            // Read the public key
-            $publicKey = openssl_pkey_get_public(file_get_contents(__DIR__ . '/../certs/public.cer'));
-            if ($publicKey === false) {
-                echo "Could not read public key\n";
-                continue;
-            }
-            
-            // Encrypt the data
-            $encryptedData = '';
-            $envKeys = [];
-            
-            // Generate IV if needed
-            $iv = null;
-            if ($testCipher !== 'rc4') {
-                $ivlen = openssl_cipher_iv_length($testCipher);
-                $iv = openssl_random_pseudo_bytes($ivlen);
-            }
-            
-            // Try to encrypt with this cipher
-            if (!openssl_seal($testData, $encryptedData, $envKeys, [$publicKey], $testCipher, $iv)) {
-                echo "Could not encrypt with $testCipher\n";
-                continue;
-            }
-            
-            // Free the key
-            openssl_free_key($publicKey);
-            
-            // Prepare the encrypted data
-            $encData = [
-                'env_key' => base64_encode($envKeys[0]),
-                'data' => base64_encode($encryptedData),
-                'cipher' => $testCipher,
-            ];
-            
-            // Add IV if used
-            if ($iv !== null && $testCipher !== 'rc4') {
-                $encData['iv'] = base64_encode($iv);
-            }
-            
-            // Log the encrypted data
-            echo "Encrypted Data:\n";
-            echo "ENV_KEY: " . $encData['env_key'] . "\n";
-            echo "DATA: " . $encData['data'] . "\n";
-            echo "CIPHER: " . $encData['cipher'] . "\n";
-            if (isset($encData['iv'])) {
-                echo "IV: " . $encData['iv'] . "\n";
-            }
-            
-            // Try to decrypt the data
-            $privateKey = openssl_pkey_get_private(file_get_contents(__DIR__ . '/../certs/private.key'));
-            if ($privateKey === false) {
-                echo "Could not read private key\n";
-                continue;
-            }
-            
-            // Decode the data
-            $envKey = base64_decode($encData['env_key']);
-            $data = base64_decode($encData['data']);
-            $ivDecrypt = isset($encData['iv']) ? base64_decode($encData['iv']) : null;
-            
-            // Decrypt the data
-            $decryptedData = '';
-            if (!openssl_open($data, $decryptedData, $envKey, $privateKey, $testCipher, $ivDecrypt)) {
-                echo "Could not decrypt with $testCipher\n";
-                continue;
-            }
-            
-            // Free the key
-            openssl_free_key($privateKey);
-            
-            // Verify the decrypted data matches the original
-            if ($decryptedData === $testData) {
-                echo "Decryption successful! The data was correctly encrypted and decrypted with $testCipher.\n";
-                $success = true;
-                break;
-            } else {
-                echo "Decryption produced different data with $testCipher.\n";
-            }
-        } catch (Exception $e) {
-            echo "Error with $testCipher: " . $e->getMessage() . "\n";
-        }
-    }
+    // Verify the decrypted data matches the original
+    expect($decryptedData)->toBe($testData);
+    
+    // Define success flag
+    $success = true;
     
     // At least one cipher should work
     expect($success)->toBeTrue();

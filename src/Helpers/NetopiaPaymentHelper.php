@@ -1,119 +1,29 @@
 <?php
 
-namespace Aflorea4\NetopiaPayments;
+namespace Aflorea4\NetopiaPayments\Helpers;
 
-use DOMDocument;
 use Exception;
-use Illuminate\Support\Facades\Config;
-use Aflorea4\NetopiaPayments\Models\Address;
-use Aflorea4\NetopiaPayments\Models\Invoice;
 use Aflorea4\NetopiaPayments\Models\Request;
 use Aflorea4\NetopiaPayments\Models\Response;
-use Aflorea4\NetopiaPayments\Helpers\PaymentFormGenerator;
-use Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption;
+use DOMDocument;
 
-class NetopiaPayments
+/**
+ * Netopia Payment Helper
+ * This class provides helper methods for Netopia Payments integration
+ */
+class NetopiaPaymentHelper
 {
     /**
-     * The Netopia signature (merchant identifier)
+     * Generate payment form data
      *
-     * @var string
-     */
-    protected $signature;
-
-    /**
-     * The public key path
-     *
-     * @var string
-     */
-    protected $publicKeyPath;
-
-    /**
-     * The private key path
-     *
-     * @var string
-     */
-    protected $privateKeyPath;
-
-    /**
-     * The live mode flag
-     *
-     * @var bool
-     */
-    protected $liveMode;
-
-    /**
-     * Create a new NetopiaPayments instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->signature = Config::get('netopia.signature');
-        $this->publicKeyPath = Config::get('netopia.public_key_path');
-        $this->privateKeyPath = Config::get('netopia.private_key_path');
-        $this->liveMode = Config::get('netopia.live_mode', false);
-    }
-
-    /**
-     * Create a payment request
-     *
-     * @param string $orderId
-     * @param float $amount
-     * @param string $currency
-     * @param string $returnUrl
-     * @param string $confirmUrl
-     * @param array $billingDetails
-     * @param string $description
-     * @return array
+     * @param Request $request The payment request
+     * @param string $signature The Netopia merchant signature
+     * @param string $publicKeyPath Path to the public key file
+     * @param bool $liveMode Whether to use live mode
+     * @return array The payment form data
      * @throws Exception
      */
-    public function createPaymentRequest(
-        string $orderId,
-        float $amount,
-        string $currency,
-        string $returnUrl,
-        string $confirmUrl,
-        array $billingDetails,
-        string $description = ''
-    ) {
-        // Create a new payment request
-        $request = new Request();
-        $request->signature = $this->signature;
-        $request->orderId = $orderId;
-        $request->returnUrl = $returnUrl;
-        $request->confirmUrl = $confirmUrl;
-
-        // Create invoice
-        $invoice = new Invoice();
-        $invoice->currency = $currency;
-        $invoice->amount = $amount;
-        $invoice->details = $description;
-
-        // Set billing details
-        $billingAddress = new Address();
-        $billingAddress->type = $billingDetails['type'] ?? 'person';
-        $billingAddress->firstName = $billingDetails['firstName'] ?? '';
-        $billingAddress->lastName = $billingDetails['lastName'] ?? '';
-        $billingAddress->email = $billingDetails['email'] ?? '';
-        $billingAddress->address = $billingDetails['address'] ?? '';
-        $billingAddress->mobilePhone = $billingDetails['mobilePhone'] ?? '';
-
-        $invoice->setBillingAddress($billingAddress);
-        $request->invoice = $invoice;
-
-        // Generate the payment form data
-        return $this->generatePaymentFormData($request);
-    }
-
-    /**
-     * Generate the payment form data
-     *
-     * @param Request $request
-     * @return array
-     * @throws Exception
-     */
-    protected function generatePaymentFormData(Request $request)
+    public static function generatePaymentFormData(Request $request, $signature, $publicKeyPath, $liveMode = false)
     {
         // Create XML document
         $xmlDoc = new DOMDocument('1.0', 'utf-8');
@@ -170,36 +80,32 @@ class NetopiaPayments
         $xmlString = $xmlDoc->saveXML();
 
         // Encrypt the XML
-        $encryptedData = NetopiaPaymentEncryption::encrypt($xmlString, $this->signature, $this->publicKeyPath);
+        $encryptedData = NetopiaPaymentEncryption::encrypt($xmlString, $signature, $publicKeyPath);
 
         // Return the payment form data
         return [
-            'url' => $this->getPaymentUrl(),
             'env_key' => $encryptedData['env_key'],
             'data' => $encryptedData['data'],
             'cipher' => $encryptedData['cipher'],
+            'url' => self::getPaymentUrl($liveMode),
         ];
     }
 
     /**
      * Process the payment response
      *
-     * @param string $envKey
-     * @param string $data
-     * @param string $cipher
-     * @return Response
+     * @param string $envKey The envelope key
+     * @param string $data The encrypted data
+     * @param string $signature The Netopia merchant signature
+     * @param string $privateKeyPath Path to the private key file
+     * @param string $cipher The cipher used for encryption
+     * @return Response The payment response
      * @throws Exception
      */
-    public function processResponse($envKey, $data, $cipher = 'rc4')
+    public static function processResponse($envKey, $data, $signature, $privateKeyPath, $cipher = 'rc4')
     {
         // Decrypt the data
-        $decryptedData = NetopiaPaymentEncryption::decrypt(
-            $envKey,
-            $data,
-            $this->signature,
-            $this->privateKeyPath,
-            $cipher
-        );
+        $decryptedData = NetopiaPaymentEncryption::decrypt($envKey, $data, $signature, $privateKeyPath, $cipher);
 
         // Parse the XML
         $xmlDoc = new DOMDocument();
@@ -242,26 +148,14 @@ class NetopiaPayments
     }
 
     /**
-     * Get the payment URL
-     *
-     * @return string
-     */
-    protected function getPaymentUrl()
-    {
-        return $this->liveMode
-            ? 'https://secure.mobilpay.ro'
-            : 'https://sandboxsecure.mobilpay.ro';
-    }
-
-    /**
      * Generate the payment response for Netopia
      *
-     * @param int $errorType
-     * @param int $errorCode
-     * @param string $message
-     * @return string
+     * @param int $errorType The error type
+     * @param int $errorCode The error code
+     * @param string $message The message
+     * @return string The XML response
      */
-    public function generatePaymentResponse(int $errorType = 0, int $errorCode = 0, string $message = 'OK')
+    public static function generatePaymentResponse($errorType = 0, $errorCode = 0, $message = 'OK')
     {
         $xmlDoc = new DOMDocument('1.0', 'utf-8');
         $xmlDoc->formatOutput = true;
@@ -276,5 +170,18 @@ class NetopiaPayments
         $xmlDoc->appendChild($crcElem);
         
         return $xmlDoc->saveXML();
+    }
+
+    /**
+     * Get the payment URL
+     *
+     * @param bool $liveMode Whether to use live mode
+     * @return string The payment URL
+     */
+    private static function getPaymentUrl($liveMode)
+    {
+        return $liveMode
+            ? 'https://secure.mobilpay.ro'
+            : 'https://sandboxsecure.mobilpay.ro';
     }
 }

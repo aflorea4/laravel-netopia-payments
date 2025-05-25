@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'aflorea4/laravel-netopia-payments',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '8c93044dc9b8a297441cb3d782c1a25bd489eaaa',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         'aflorea4/laravel-netopia-payments' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '8c93044dc9b8a297441cb3d782c1a25bd489eaaa',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -129,6 +129,15 @@
             'install_path' => __DIR__ . '/../fakerphp/faker',
             'aliases' => array(),
             'dev_requirement' => true,
+        ),
+        'felixdorn/php-rc4' => array(
+            'pretty_version' => '0.1.0',
+            'version' => '0.1.0.0',
+            'reference' => 'ac2ecf4b876b794bf61cdf56e7baba0b04a54caf',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../felixdorn/php-rc4',
+            'aliases' => array(),
+            'dev_requirement' => false,
         ),
         'fidry/cpu-core-counter' => array(
             'pretty_version' => '1.2.0',
@@ -829,8 +838,8 @@
         'psr/log-implementation' => array(
             'dev_requirement' => false,
             'provided' => array(
-                0 => '1.0|2.0|3.0',
-                1 => '3.0.0',
+                0 => '3.0.0',
+                1 => '1.0|2.0|3.0',
             ),
         ),
         'psr/simple-cache' => array(

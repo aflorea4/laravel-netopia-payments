@@ -32,6 +32,69 @@ class RC4Cipher
         // RC4 is symmetric, so encryption and decryption are the same operation
         return self::rc4($data, $key);
     }
+    
+    /**
+     * Encrypt data using RC4 algorithm with envelope key
+     * This method simulates the openssl_seal function but using our custom RC4 implementation
+     *
+     * @param string $data The data to encrypt
+     * @param string &$sealed_data The sealed data (output parameter)
+     * @param array &$env_keys The envelope keys (output parameter)
+     * @param array $pub_key_ids Array of public key identifiers
+     * @return bool True on success, false on failure
+     */
+    public static function seal($data, &$sealed_data, &$env_keys, $pub_key_ids)
+    {
+        try {
+            // Generate a random key for RC4
+            $rc4_key = openssl_random_pseudo_bytes(16);
+            
+            // Encrypt the data with RC4
+            $sealed_data = self::rc4($data, $rc4_key);
+            
+            // Encrypt the RC4 key with each public key
+            $env_keys = [];
+            foreach ($pub_key_ids as $key_id) {
+                $encrypted_key = '';
+                if (!openssl_public_encrypt($rc4_key, $encrypted_key, $key_id)) {
+                    return false;
+                }
+                $env_keys[] = $encrypted_key;
+            }
+            
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+    
+    /**
+     * Decrypt data using RC4 algorithm with envelope key
+     * This method simulates the openssl_open function but using our custom RC4 implementation
+     *
+     * @param string $sealed_data The sealed data
+     * @param string &$open_data The opened data (output parameter)
+     * @param string $env_key The envelope key
+     * @param mixed $priv_key_id The private key identifier
+     * @return bool True on success, false on failure
+     */
+    public static function open($sealed_data, &$open_data, $env_key, $priv_key_id)
+    {
+        try {
+            // Decrypt the RC4 key with the private key
+            $rc4_key = '';
+            if (!openssl_private_decrypt($env_key, $rc4_key, $priv_key_id)) {
+                return false;
+            }
+            
+            // Decrypt the data with RC4
+            $open_data = self::rc4($sealed_data, $rc4_key);
+            
+            return true;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
 
     /**
      * RC4 algorithm implementation
