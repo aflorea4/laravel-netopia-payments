@@ -17,6 +17,7 @@ it('handles confirm request and returns success response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
+        ->with('test-env-key', 'test-data', 'test-iv')
         ->andReturn(createSuccessfulResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -30,6 +31,7 @@ it('handles confirm request and returns success response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
+        'iv' => 'test-iv',
     ]);
     
     // Call the controller method
@@ -47,6 +49,7 @@ it('handles confirm request and returns pending response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
+        ->with('test-env-key', 'test-data', 'test-iv')
         ->andReturn(createPendingResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -60,6 +63,7 @@ it('handles confirm request and returns pending response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
+        'iv' => 'test-iv',
     ]);
     
     // Call the controller method
@@ -77,6 +81,7 @@ it('handles confirm request and returns canceled response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
+        ->with('test-env-key', 'test-data', 'test-iv')
         ->andReturn(createCanceledResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -90,6 +95,7 @@ it('handles confirm request and returns canceled response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
+        'iv' => 'test-iv',
     ]);
     
     // Call the controller method
@@ -107,6 +113,7 @@ it('handles error in confirm request', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
+        ->with('test-env-key', 'test-data', 'test-iv')
         ->andThrow(new Exception('Test error'));
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -117,6 +124,7 @@ it('handles error in confirm request', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
+        'iv' => 'test-iv',
     ]);
     
     // Call the controller method

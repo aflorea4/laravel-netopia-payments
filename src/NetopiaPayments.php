@@ -207,7 +207,12 @@ class NetopiaPayments
         // Encrypt the data
         $encryptedData = '';
         $envKeys = [];
-        if (!openssl_seal($data, $encryptedData, $envKeys, [$publicKey], 'AES256')) {
+        $iv = '';
+        // Generate a random IV for AES256 cipher
+        $ivLength = openssl_cipher_iv_length('AES256');
+        $iv = openssl_random_pseudo_bytes($ivLength);
+        
+        if (!openssl_seal($data, $encryptedData, $envKeys, [$publicKey], 'AES256', $iv)) {
             throw new Exception('Could not encrypt data');
         }
 
@@ -218,6 +223,7 @@ class NetopiaPayments
         return [
             'env_key' => base64_encode($envKeys[0]),
             'data' => base64_encode($encryptedData),
+            'iv' => base64_encode($iv),
         ];
     }
 
@@ -226,14 +232,18 @@ class NetopiaPayments
      *
      * @param string $envKey
      * @param string $data
+     * @param string|null $iv
      * @return string
      * @throws Exception
      */
-    protected function decrypt(string $envKey, string $data)
+    protected function decrypt(string $envKey, string $data, string $iv = null)
     {
         // Decode the data
         $envKey = base64_decode($envKey);
         $data = base64_decode($data);
+        if ($iv !== null) {
+            $iv = base64_decode($iv);
+        }
 
         // Read the private key
         $privateKey = openssl_pkey_get_private(file_get_contents($this->privateKeyPath));
@@ -243,7 +253,7 @@ class NetopiaPayments
 
         // Decrypt the data
         $decryptedData = '';
-        if (!openssl_open($data, $decryptedData, $envKey, $privateKey, 'AES256')) {
+        if (!openssl_open($data, $decryptedData, $envKey, $privateKey, 'AES256', $iv)) {
             throw new Exception('Could not decrypt data');
         }
 
@@ -259,13 +269,14 @@ class NetopiaPayments
      *
      * @param string $envKey
      * @param string $data
+     * @param string|null $iv
      * @return Response
      * @throws Exception
      */
-    public function processResponse(string $envKey, string $data)
+    public function processResponse(string $envKey, string $data, string $iv = null)
     {
         // Decrypt the data
-        $decryptedData = $this->decrypt($envKey, $data);
+        $decryptedData = $this->decrypt($envKey, $data, $iv);
 
         // Parse the XML
         $xmlDoc = new DOMDocument();

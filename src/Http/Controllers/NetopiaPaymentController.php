@@ -22,12 +22,13 @@ class NetopiaPaymentController extends Controller
     public function confirm(Request $request)
     {
         try {
-            // Get the env_key and data from the request
+            // Get the env_key, data and iv from the request
             $envKey = $request->input('env_key');
             $data = $request->input('data');
+            $iv = $request->input('iv');
 
             // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data);
+            $response = NetopiaPayments::processResponse($envKey, $data, $iv);
 
             // Log the payment response
             Log::info('Netopia payment response', [
@@ -76,12 +77,13 @@ class NetopiaPaymentController extends Controller
     public function return(Request $request)
     {
         try {
-            // Get the env_key and data from the request
+            // Get the env_key, data and iv from the request
             $envKey = $request->input('env_key');
             $data = $request->input('data');
+            $iv = $request->input('iv');
 
             // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data);
+            $response = NetopiaPayments::processResponse($envKey, $data, $iv);
 
             // Redirect based on the payment status
             if ($response->isSuccessful() || $response->isPaid()) {
