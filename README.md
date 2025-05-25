@@ -92,9 +92,13 @@ $paymentData = NetopiaPayments::createPaymentRequest(
 );
 
 // The payment data contains:
-// - env_key: The encrypted envelope key
-// - data: The encrypted payment data
+// - env_key: The encrypted envelope key (REQUIRED)
+// - data: The encrypted payment data (REQUIRED)
+// - iv: The initialization vector for decryption (REQUIRED)
 // - url: The payment URL (sandbox or live)
+//
+// IMPORTANT: All three parameters (env_key, data, and iv) must be included in your payment form
+// submission to Netopia. Missing any of these will result in a 500 error from Netopia's server.
 
 // Redirect to the payment page
 return view('payment.redirect', [
@@ -117,6 +121,7 @@ Create a view file `resources/views/payment/redirect.blade.php`:
     <p>Please wait while we redirect you to the payment page.</p>
 
     <form id="netopiaForm" action="{{ $paymentData['url'] }}" method="post">
+      <!-- All three parameters are required for successful payment processing -->
       <input
         type="hidden"
         name="env_key"
@@ -256,7 +261,8 @@ class PaymentController extends Controller
             // Process the payment response
             $response = NetopiaPayments::processResponse(
                 $request->input('env_key'),
-                $request->input('data')
+                $request->input('data'),
+                $request->input('iv') // The IV parameter is required for decryption
             );
 
             // Log the payment response
@@ -317,8 +323,8 @@ class PaymentController extends Controller
         // This is where the user is redirected after the payment
         // You can show a thank you page or order summary
 
-        // Check if there's payment data in the request
-        if ($request->has('env_key') && $request->has('data')) {
+        // Check if all required payment data is in the request
+        if ($request->has('env_key') && $request->has('data') && $request->has('iv')) {
             try {
                 // Process the payment response
                 $response = NetopiaPayments::processResponse(

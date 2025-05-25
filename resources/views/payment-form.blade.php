@@ -64,6 +64,7 @@
         <form id="netopiaForm" action="{{ $paymentUrl }}" method="post">
             <input type="hidden" name="env_key" value="{{ $envKey }}">
             <input type="hidden" name="data" value="{{ $data }}">
+            <input type="hidden" name="iv" value="{{ $iv }}">
             <button type="submit" class="button" id="manualButton" style="display: none;">Pay Now</button>
         </form>
         

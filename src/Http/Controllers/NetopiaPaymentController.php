@@ -26,6 +26,25 @@ class NetopiaPaymentController extends Controller
             $envKey = $request->input('env_key');
             $data = $request->input('data');
             $iv = $request->input('iv');
+            
+            // Log the request parameters
+            Log::info('Netopia payment confirmation request received', [
+                'request_id' => uniqid(),
+                'has_env_key' => !empty($envKey),
+                'has_data' => !empty($data),
+                'has_iv' => !empty($iv),
+            ]);
+            
+            // Validate required parameters
+            if (empty($envKey) || empty($data) || empty($iv)) {
+                Log::warning('Netopia payment confirmation missing parameters', [
+                    'request_id' => uniqid(),
+                    'has_env_key' => !empty($envKey),
+                    'has_data' => !empty($data),
+                    'has_iv' => !empty($iv),
+                ]);
+                throw new Exception('Missing required parameters for payment processing');
+            }
 
             // Process the payment response
             $response = NetopiaPayments::processResponse($envKey, $data, $iv);
@@ -53,10 +72,17 @@ class NetopiaPaymentController extends Controller
                 ['Content-Type' => 'application/xml']
             );
         } catch (Exception $e) {
-            // Log the error
+            // Log the error with enhanced details
             Log::error('Netopia payment error', [
+                'request_id' => uniqid(),
                 'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'has_env_key' => !empty($request->input('env_key')),
+                'has_data' => !empty($request->input('data')),
+                'has_iv' => !empty($request->input('iv')),
             ]);
 
             // Return an error response to Netopia
@@ -81,6 +107,25 @@ class NetopiaPaymentController extends Controller
             $envKey = $request->input('env_key');
             $data = $request->input('data');
             $iv = $request->input('iv');
+            
+            // Log the request parameters
+            Log::info('Netopia payment return request received', [
+                'request_id' => uniqid(),
+                'has_env_key' => !empty($envKey),
+                'has_data' => !empty($data),
+                'has_iv' => !empty($iv),
+            ]);
+            
+            // Validate required parameters
+            if (empty($envKey) || empty($data) || empty($iv)) {
+                Log::warning('Netopia payment return missing parameters', [
+                    'request_id' => uniqid(),
+                    'has_env_key' => !empty($envKey),
+                    'has_data' => !empty($data),
+                    'has_iv' => !empty($iv),
+                ]);
+                throw new Exception('Missing required parameters for payment processing');
+            }
 
             // Process the payment response
             $response = NetopiaPayments::processResponse($envKey, $data, $iv);
@@ -98,10 +143,18 @@ class NetopiaPaymentController extends Controller
                 ]);
             }
         } catch (Exception $e) {
-            // Log the error
+            // Log the error with enhanced details
             Log::error('Netopia payment return error', [
+                'request_id' => uniqid(),
                 'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
+                'has_env_key' => !empty($request->input('env_key')),
+                'has_data' => !empty($request->input('data')),
+                'has_iv' => !empty($request->input('iv')),
+                'request_url' => $request->fullUrl(),
             ]);
 
             // Redirect to the payment failed page
