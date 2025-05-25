@@ -209,7 +209,8 @@ class NetopiaPayments
         $envKeys = [];
         
         // Try different ciphers in order of preference
-        $ciphers = ['RC4', 'AES-128-CBC', 'AES-256-CBC', 'BF-CBC'];
+        // Note: Using lowercase names to match PHP's openssl_get_cipher_methods() output
+        $ciphers = ['rc4', 'aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
         $cipher = null;
         $success = false;
         
@@ -221,7 +222,7 @@ class NetopiaPayments
             
             // Generate IV if needed
             $iv = null;
-            if ($trycipher !== 'RC4') {
+            if ($trycipher !== 'rc4') {
                 $ivlen = openssl_cipher_iv_length($trycipher);
                 $iv = openssl_random_pseudo_bytes($ivlen);
             }
@@ -249,7 +250,7 @@ class NetopiaPayments
         ];
         
         // Add IV if used
-        if (isset($iv) && $cipher !== 'RC4') {
+        if (isset($iv) && $cipher !== 'rc4') {
             $result['iv'] = base64_encode($iv);
         }
         
@@ -266,7 +267,7 @@ class NetopiaPayments
      * @return string
      * @throws Exception
      */
-    protected function decrypt(string $envKey, string $data, string $cipher = 'RC4', string $iv = null)
+    protected function decrypt(string $envKey, string $data, string $cipher = 'rc4', string $iv = null)
     {
         // Decode the data
         $envKey = base64_decode($envKey);
@@ -287,7 +288,7 @@ class NetopiaPayments
         // Check if the cipher is available
         if (!in_array($cipher, openssl_get_cipher_methods())) {
             // Try alternative ciphers if the specified one is not available
-            $ciphers = ['RC4', 'AES-128-CBC', 'AES-256-CBC', 'BF-CBC'];
+            $ciphers = ['rc4', 'aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
             $success = false;
             
             foreach ($ciphers as $trycipher) {

@@ -51,7 +51,7 @@ class PaymentFormGenerator
             'paymentUrl' => $paymentData['url'],
             'envKey' => $paymentData['env_key'],
             'data' => $paymentData['data'],
-            'cipher' => $paymentData['cipher'] ?? 'RC4',
+            'cipher' => $paymentData['cipher'] ?? 'rc4',
         ]);
     }
     

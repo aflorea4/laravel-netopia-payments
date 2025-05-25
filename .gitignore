@@ -8,3 +8,7 @@
 .phpunit.result.cache
 .DS_Store
 Thumbs.db
+
+# Test certificates
+/tests/certs/*.cer
+/tests/certs/*.key
