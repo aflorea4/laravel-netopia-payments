@@ -9,6 +9,7 @@ use Aflorea4\NetopiaPayments\Models\Address;
 use Aflorea4\NetopiaPayments\Models\Invoice;
 use Aflorea4\NetopiaPayments\Models\Request;
 use Aflorea4\NetopiaPayments\Models\Response;
+use Aflorea4\NetopiaPayments\Helpers\RC4Cipher;
 
 class NetopiaPayments
 {
@@ -198,63 +199,128 @@ class NetopiaPayments
      */
     protected function encrypt(string $data)
     {
-        // Read the public key
-        $publicKey = openssl_pkey_get_public(file_get_contents($this->publicKeyPath));
-        if ($publicKey === false) {
-            throw new Exception('Could not read public key');
+        // Try different approaches in order of preference
+        
+        // 1. First try built-in RC4 if available
+        if (in_array('rc4', openssl_get_cipher_methods())) {
+            try {
+                // Read the public key
+                $publicKey = openssl_pkey_get_public(file_get_contents($this->publicKeyPath));
+                if ($publicKey === false) {
+                    throw new Exception('Could not read public key');
+                }
+                
+                // Encrypt with built-in RC4
+                $encryptedData = '';
+                $envKeys = [];
+                
+                if (openssl_seal($data, $encryptedData, $envKeys, [$publicKey], 'rc4')) {
+                    // Free the key
+                    openssl_free_key($publicKey);
+                    
+                    // Return the encrypted data
+                    return [
+                        'env_key' => base64_encode($envKeys[0]),
+                        'data' => base64_encode($encryptedData),
+                        'cipher' => 'rc4',
+                    ];
+                }
+                
+                // Free the key
+                openssl_free_key($publicKey);
+            } catch (Exception $e) {
+                // If built-in RC4 fails, continue with other methods
+            }
         }
-
-        // Encrypt the data
-        $encryptedData = '';
-        $envKeys = [];
         
-        // Try different ciphers in order of preference
-        // Note: Using lowercase names to match PHP's openssl_get_cipher_methods() output
-        $ciphers = ['rc4', 'aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
-        $cipher = null;
-        $success = false;
-        
-        foreach ($ciphers as $trycipher) {
-            // Skip if the cipher is not available
-            if (!in_array($trycipher, openssl_get_cipher_methods())) {
-                continue;
+        // 2. Try our custom RC4 implementation
+        try {
+            // Read the public key
+            $publicKey = openssl_pkey_get_public(file_get_contents($this->publicKeyPath));
+            if ($publicKey === false) {
+                throw new Exception('Could not read public key');
             }
             
-            // Generate IV if needed
-            $iv = null;
-            if ($trycipher !== 'rc4') {
+            // Generate a random key for RC4
+            $rc4Key = openssl_random_pseudo_bytes(16);
+            
+            // Encrypt the data with our custom RC4 implementation
+            $rc4Data = RC4Cipher::encrypt($data, $rc4Key);
+            
+            // Encrypt the RC4 key with the public key
+            $encryptedKey = '';
+            if (!openssl_public_encrypt($rc4Key, $encryptedKey, $publicKey)) {
+                throw new Exception('Could not encrypt RC4 key with public key');
+            }
+            
+            // Free the key
+            openssl_free_key($publicKey);
+            
+            // Return the encrypted data
+            return [
+                'env_key' => base64_encode($encryptedKey),
+                'data' => base64_encode($rc4Data),
+                'cipher' => 'rc4-custom', // Mark as custom implementation
+            ];
+        } catch (Exception $e) {
+            // If custom RC4 fails, continue with other methods
+        }
+        
+        // 3. Try other available ciphers
+        try {
+            // Read the public key
+            $publicKey = openssl_pkey_get_public(file_get_contents($this->publicKeyPath));
+            if ($publicKey === false) {
+                throw new Exception('Could not read public key');
+            }
+            
+            // Encrypt the data using built-in OpenSSL methods
+            $encryptedData = '';
+            $envKeys = [];
+            
+            // Note: Using lowercase names to match PHP's openssl_get_cipher_methods() output
+            $ciphers = ['aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
+            $cipher = null;
+            $success = false;
+            
+            foreach ($ciphers as $trycipher) {
+                // Skip if the cipher is not available
+                if (!in_array($trycipher, openssl_get_cipher_methods())) {
+                    continue;
+                }
+                
+                // Generate IV
                 $ivlen = openssl_cipher_iv_length($trycipher);
                 $iv = openssl_random_pseudo_bytes($ivlen);
+                
+                // Try to encrypt with this cipher
+                if (openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $trycipher, $iv)) {
+                    $cipher = $trycipher;
+                    $success = true;
+                    break;
+                }
             }
             
-            // Try to encrypt with this cipher
-            if (openssl_seal($data, $encryptedData, $envKeys, [$publicKey], $trycipher, $iv)) {
-                $cipher = $trycipher;
-                $success = true;
-                break;
+            if (!$success) {
+                throw new Exception('Could not encrypt data. No supported cipher method found.');
             }
-        }
-        
-        if (!$success) {
-            throw new Exception('Could not encrypt data. No supported cipher method found.');
-        }
 
-        // Free the key
-        openssl_free_key($publicKey);
+            // Free the key
+            openssl_free_key($publicKey);
 
-        // Return the encrypted data
-        $result = [
-            'env_key' => base64_encode($envKeys[0]),
-            'data' => base64_encode($encryptedData),
-            'cipher' => $cipher,
-        ];
-        
-        // Add IV if used
-        if (isset($iv) && $cipher !== 'rc4') {
-            $result['iv'] = base64_encode($iv);
+            // Return the encrypted data
+            $result = [
+                'env_key' => base64_encode($envKeys[0]),
+                'data' => base64_encode($encryptedData),
+                'cipher' => $cipher,
+                'iv' => base64_encode($iv),
+            ];
+            
+            return $result;
+        } catch (Exception $e) {
+            // If all methods fail, throw the exception
+            throw new Exception('Could not encrypt data: ' . $e->getMessage());
         }
-        
-        return $result;
     }
 
     /**
@@ -281,42 +347,108 @@ class NetopiaPayments
         if ($privateKey === false) {
             throw new Exception('Could not read private key');
         }
-
-        // Decrypt the data
-        $decryptedData = '';
         
-        // Check if the cipher is available
-        if (!in_array($cipher, openssl_get_cipher_methods())) {
-            // Try alternative ciphers if the specified one is not available
-            $ciphers = ['rc4', 'aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
-            $success = false;
-            
-            foreach ($ciphers as $trycipher) {
-                if (!in_array($trycipher, openssl_get_cipher_methods())) {
-                    continue;
+        // 1. Handle our custom RC4 implementation
+        if ($cipher === 'rc4-custom') {
+            try {
+                // Decrypt the envelope key with the private key
+                $rc4Key = '';
+                $decryptSuccess = openssl_private_decrypt($envKey, $rc4Key, $privateKey);
+                if (!$decryptSuccess) {
+                    throw new Exception('Could not decrypt the envelope key');
                 }
                 
-                if (openssl_open($data, $decryptedData, $envKey, $privateKey, $trycipher, $iv)) {
-                    $success = true;
-                    break;
+                // Decrypt the data with our custom RC4 implementation
+                $decryptedData = RC4Cipher::decrypt($data, $rc4Key);
+                
+                // Free the key
+                openssl_free_key($privateKey);
+                
+                return $decryptedData;
+            } catch (Exception $e) {
+                // If custom RC4 decryption fails, throw the exception
+                throw new Exception('Could not decrypt data with custom RC4: ' . $e->getMessage());
+            }
+        }
+        
+        // 2. Handle built-in RC4 if available
+        if ($cipher === 'rc4' && in_array('rc4', openssl_get_cipher_methods())) {
+            try {
+                // Decrypt with built-in RC4
+                $decryptedData = '';
+                if (openssl_open($data, $decryptedData, $envKey, $privateKey, 'rc4')) {
+                    // Free the key
+                    openssl_free_key($privateKey);
+                    return $decryptedData;
                 }
+            } catch (Exception $e) {
+                // If built-in RC4 fails, continue with other methods
             }
-            
-            if (!$success) {
-                throw new Exception('Could not decrypt data. No supported cipher method found.');
-            }
-        } else {
-            // Use the specified cipher
-            if (!openssl_open($data, $decryptedData, $envKey, $privateKey, $cipher, $iv)) {
-                throw new Exception('Could not decrypt data. Please ensure all required parameters are provided correctly.');
+        }
+        
+        // 3. If RC4 is specified but not available, try our custom implementation
+        if ($cipher === 'rc4' && !in_array('rc4', openssl_get_cipher_methods())) {
+            try {
+                // Try to decrypt the envelope key with the private key
+                $rc4Key = '';
+                $decryptSuccess = openssl_private_decrypt($envKey, $rc4Key, $privateKey);
+                if ($decryptSuccess) {
+                    // Decrypt the data with our custom RC4 implementation
+                    $decryptedData = RC4Cipher::decrypt($data, $rc4Key);
+                    
+                    // Free the key
+                    openssl_free_key($privateKey);
+                    
+                    return $decryptedData;
+                }
+            } catch (Exception $e) {
+                // If custom RC4 decryption fails, continue with other methods
             }
         }
 
-        // Free the key
-        openssl_free_key($privateKey);
+        // 4. Try with the specified cipher or alternatives
+        try {
+            $decryptedData = '';
+            
+            // Check if the cipher is available
+            if (!in_array($cipher, openssl_get_cipher_methods())) {
+                // Try alternative ciphers if the specified one is not available
+                $ciphers = ['aes-128-cbc', 'aes-256-cbc', 'des-ede3-cbc'];
+                $success = false;
+                
+                foreach ($ciphers as $trycipher) {
+                    if (!in_array($trycipher, openssl_get_cipher_methods())) {
+                        continue;
+                    }
+                    
+                    if (openssl_open($data, $decryptedData, $envKey, $privateKey, $trycipher, $iv)) {
+                        $success = true;
+                        break;
+                    }
+                }
+                
+                if (!$success) {
+                    throw new Exception('Could not decrypt data. No supported cipher method found.');
+                }
+            } else {
+                // Use the specified cipher
+                if (!openssl_open($data, $decryptedData, $envKey, $privateKey, $cipher, $iv)) {
+                    throw new Exception('Could not decrypt data. Please ensure all required parameters are provided correctly.');
+                }
+            }
 
-        // Return the decrypted data
-        return $decryptedData;
+            // Free the key
+            openssl_free_key($privateKey);
+
+            // Return the decrypted data
+            return $decryptedData;
+        } catch (Exception $e) {
+            // Free the key
+            openssl_free_key($privateKey);
+            
+            // If all methods fail, throw the exception
+            throw new Exception('Could not decrypt data: ' . $e->getMessage());
+        }
     }
 
     /**

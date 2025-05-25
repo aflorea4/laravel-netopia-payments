@@ -47,11 +47,17 @@ class PaymentFormGenerator
         );
         
         // Return the payment form view
+        // If cipher is rc4-custom, convert it to rc4 for Netopia compatibility
+        $cipher = $paymentData['cipher'] ?? 'rc4';
+        if ($cipher === 'rc4-custom') {
+            $cipher = 'rc4';
+        }
+        
         return View::make('netopia::payment-form', [
             'paymentUrl' => $paymentData['url'],
             'envKey' => $paymentData['env_key'],
             'data' => $paymentData['data'],
-            'cipher' => $paymentData['cipher'] ?? 'rc4',
+            'cipher' => $cipher,
         ]);
     }
     
