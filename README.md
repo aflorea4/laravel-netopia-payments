@@ -1,5 +1,10 @@
 # Laravel Netopia Payments
 
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
+[![GitHub Tests Action Status](https://img.shields.io/github/actions/workflow/status/aflorea4/laravel-netopia-payments/tests.yml?branch=main&label=tests&style=flat-square)](https://github.com/aflorea4/laravel-netopia-payments/actions?query=workflow%3Atests+branch%3Amain)
+[![Total Downloads](https://img.shields.io/packagist/dt/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
+[![License](https://img.shields.io/packagist/l/aflorea4/laravel-netopia-payments.svg?style=flat-square)](https://packagist.org/packages/aflorea4/laravel-netopia-payments)
+
 A Laravel package for integrating with Netopia Payments (Romania) payment gateway.
 
 ## Requirements
@@ -395,6 +400,27 @@ This package uses PEST for testing. To run the tests, you can use the following 
 ```bash
 composer test
 ```
+
+## Changelog
+
+Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+
+## Contributing
+
+Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
+
+## Security Vulnerabilities
+
+Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
+
+## Credits
+
+- [Alexandru Florea](https://github.com/aflorea4)
+- [All Contributors](../../contributors)
+
+## License
+
+The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
 
 The test suite includes:
 
