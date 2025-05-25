@@ -1,0 +1,54 @@
+{
+    "name": "aflorea4/laravel-netopia-payments",
+    "description": "Laravel package for Netopia Payments integration",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Alex Florea",
+            "email": "alex@imflorea.dev"
+        }
+    ],
+    "require": {
+        "php": "^7.4|^8.0",
+        "illuminate/support": "^8.0|^9.0|^10.0",
+        "ext-openssl": "*",
+        "ext-dom": "*"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^6.0|^7.0|^8.0",
+        "pestphp/pest": "^1.21|^2.0",
+        "pestphp/pest-plugin-laravel": "^1.1|^2.0"
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage"
+    },
+    "autoload": {
+        "psr-4": {
+            "Aflorea4\\NetopiaPayments\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Aflorea4\\NetopiaPayments\\NetopiaPaymentsServiceProvider"
+            ],
+            "aliases": {
+                "NetopiaPayments": "Aflorea4\\NetopiaPayments\\Facades\\NetopiaPayments"
+            }
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
