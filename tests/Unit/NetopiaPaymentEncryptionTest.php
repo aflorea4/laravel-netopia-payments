@@ -77,6 +77,12 @@ it('can decrypt data using the signature and private key', function () {
         // Verify the IV is present and properly encoded
         expect(base64_decode($encryptedResult['iv'], true))->not->toBeFalse();
     } else {
+        // Skip RC4 tests if the Felix RC4 library is not available
+        if (!class_exists('Felix\RC4\RC4')) {
+            $this->markTestSkipped('Felix RC4 library is not available. These tests are deprecated as we move to AES-256-CBC encryption.');
+            return;
+        }
+        
         // For RC4 encryption
         $encryptedResult = NetopiaPaymentEncryption::encrypt($testData, $signature, $publicKeyPath);
         
@@ -100,6 +106,12 @@ it('can decrypt data using the signature and private key', function () {
 });
 
 it('handles different cipher types correctly', function () {
+    // Skip this test as we're moving away from RC4 encryption
+    if (!class_exists('Felix\RC4\RC4')) {
+        $this->markTestSkipped('This test requires felix-rc4 cipher to be available');
+        return;
+    }
+    
     // Test data
     $signature = TestHelper::getTestSignature();
     $publicKeyPath = TestHelper::getTestPublicKeyPath();

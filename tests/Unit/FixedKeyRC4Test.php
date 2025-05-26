@@ -2,6 +2,13 @@
 
 use Aflorea4\NetopiaPayments\Helpers\FixedKeyRC4;
 
+// Skip all tests in this file if Felix RC4 is not available
+beforeEach(function () {
+    if (!class_exists('Felix\RC4\RC4')) {
+        $this->markTestSkipped('Felix RC4 library is not available. These tests are deprecated as we move to AES-256-CBC encryption.');
+    }
+});
+
 it('can encrypt and decrypt data with a fixed key', function () {
     // Set a custom key for testing
     $customKey = 'NetopiaTest123';
