@@ -5,26 +5,27 @@ use Aflorea4\NetopiaPayments\Models\Request;
 use Aflorea4\NetopiaPayments\Models\Invoice;
 use Aflorea4\NetopiaPayments\Models\BillingAddress;
 use Illuminate\Support\Facades\Config;
+use Tests\TestHelper;
 
 beforeEach(function () {
     // Mock the Config facade to use our test certificates
     Config::shouldReceive('get')
         ->with('netopia.signature')
-        ->andReturn('2VXM-Q4WB-F8UL-MRU6-PWP3');
+        ->andReturn(TestHelper::getTestSignature());
     
     Config::shouldReceive('get')
         ->with('netopia.public_key_path')
-        ->andReturn(__DIR__ . '/../certs/public.cer');
+        ->andReturn(TestHelper::getTestPublicKeyPath());
     
     Config::shouldReceive('get')
         ->with('netopia.private_key_path')
-        ->andReturn(__DIR__ . '/../certs/private.key');
+        ->andReturn(TestHelper::getTestPrivateKeyPath());
 });
 
 it('can generate payment form data for a request', function () {
     // Create a test request
     $request = new Request();
-    $request->signature = '2VXM-Q4WB-F8UL-MRU6-PWP3';
+    $request->signature = TestHelper::getTestSignature();
     $request->orderId = 'TEST-' . time();
     $request->returnUrl = 'https://example.com/return';
     $request->confirmUrl = 'https://example.com/confirm';
@@ -51,8 +52,8 @@ it('can generate payment form data for a request', function () {
     // Generate payment form data
     $paymentFormData = NetopiaPaymentHelper::generatePaymentFormData(
         $request, 
-        '2VXM-Q4WB-F8UL-MRU6-PWP3', 
-        __DIR__ . '/../certs/public.cer',
+        TestHelper::getTestSignature(), 
+        TestHelper::getTestPublicKeyPath(),
         false // Use sandbox mode
     );
     
