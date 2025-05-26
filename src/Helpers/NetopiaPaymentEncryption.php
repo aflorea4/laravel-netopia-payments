@@ -35,16 +35,32 @@ class NetopiaPaymentEncryption
         
         try {
             // Read the public key
-            $publicKey = openssl_pkey_get_public(file_get_contents($publicKeyPath));
-            if ($publicKey === false) {
-                throw new Exception('Could not read public key');
+            $publicKeyContent = file_get_contents($publicKeyPath);
+            if ($publicKeyContent === false) {
+                throw new Exception('Could not read public key file: ' . $publicKeyPath);
             }
             
-            // Generate a random IV
-            $iv = openssl_random_pseudo_bytes(16);
+            $publicKey = openssl_pkey_get_public($publicKeyContent);
+            if ($publicKey === false) {
+                throw new Exception('Could not load public key: ' . openssl_error_string());
+            }
             
-            // Generate a random key for AES
+            // Generate a random IV (16 bytes for AES-256-CBC)
+            $iv = openssl_random_pseudo_bytes(16);
+            if ($iv === false) {
+                throw new Exception('Failed to generate secure random IV');
+            }
+            
+            // Generate a random key for AES (32 bytes for AES-256-CBC)
             $aesKey = openssl_random_pseudo_bytes(32); // 256 bits
+            if ($aesKey === false) {
+                throw new Exception('Failed to generate secure random AES key');
+            }
+            
+            // Verify key length
+            if (strlen($aesKey) !== 32) {
+                throw new Exception('Invalid AES key length: ' . strlen($aesKey) . ' bytes. Expected 32 bytes for AES-256-CBC.');
+            }
             
             // Encrypt data with AES
             $encryptedData = openssl_encrypt($data, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
@@ -61,11 +77,16 @@ class NetopiaPaymentEncryption
             // Free the key
             @openssl_free_key($publicKey);
             
+            // Base64 encode all binary data for safe transmission
+            $base64EnvKey = base64_encode($encryptedKey);
+            $base64Data = base64_encode($encryptedData);
+            $base64Iv = base64_encode($iv);
+            
             return [
-                'env_key' => base64_encode($encryptedKey),
-                'data' => base64_encode($encryptedData),
+                'env_key' => $base64EnvKey,
+                'data' => $base64Data,
                 'cipher' => 'aes-256-cbc',
-                'iv' => base64_encode($iv)
+                'iv' => $base64Iv
             ];
         } catch (Exception $e) {
             throw new Exception('AES encryption failed: ' . $e->getMessage());
@@ -99,23 +120,49 @@ class NetopiaPaymentEncryption
         try {
             // Decode the base64 encoded data
             $encryptedKey = base64_decode($envKey);
-            $encryptedData = base64_decode($data);
-            $iv = base64_decode($iv);
+            if ($encryptedKey === false) {
+                throw new Exception('Invalid base64 encoding for envelope key');
+            }
             
-            if (empty($iv) || strlen($iv) !== 16) {
-                throw new Exception('Invalid initialization vector for AES-256-CBC');
+            $encryptedData = base64_decode($data);
+            if ($encryptedData === false) {
+                throw new Exception('Invalid base64 encoding for encrypted data');
+            }
+            
+            // Handle IV - ensure it's properly decoded and has correct length
+            if (empty($iv)) {
+                throw new Exception('Initialization vector (IV) is required for AES-256-CBC');
+            }
+            
+            $iv = base64_decode($iv);
+            if ($iv === false) {
+                throw new Exception('Invalid base64 encoding for initialization vector');
+            }
+            
+            if (strlen($iv) !== 16) {
+                throw new Exception('Invalid initialization vector length: ' . strlen($iv) . ' bytes. Expected 16 bytes for AES-256-CBC.');
             }
             
             // Read the private key
-            $privateKey = openssl_pkey_get_private(file_get_contents($privateKeyPath));
+            $privateKeyContent = file_get_contents($privateKeyPath);
+            if ($privateKeyContent === false) {
+                throw new Exception('Could not read private key file: ' . $privateKeyPath);
+            }
+            
+            $privateKey = openssl_pkey_get_private($privateKeyContent);
             if ($privateKey === false) {
-                throw new Exception('Could not read private key');
+                throw new Exception('Could not load private key: ' . openssl_error_string());
             }
             
             // Decrypt the AES key with the private key
             $aesKey = '';
             if (!openssl_private_decrypt($encryptedKey, $aesKey, $privateKey, OPENSSL_PKCS1_PADDING)) {
                 throw new Exception('Failed to decrypt AES key: ' . openssl_error_string());
+            }
+            
+            // Verify AES key length
+            if (strlen($aesKey) !== 32) {
+                throw new Exception('Invalid AES key length: ' . strlen($aesKey) . ' bytes. Expected 32 bytes for AES-256-CBC.');
             }
             
             // Free the key
