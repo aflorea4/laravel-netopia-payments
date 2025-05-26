@@ -100,66 +100,44 @@ it('can encrypt and decrypt data with our NetopiaPaymentEncryption helper', func
     $publicKeyPath = __DIR__ . '/../certs/public.cer';
     $privateKeyPath = __DIR__ . '/../certs/private.key';
     
-    // Determine which cipher to use based on PHP version
-    $useAes = (PHP_VERSION_ID >= 70000 && OPENSSL_VERSION_NUMBER > 0x10000000);
+    // Test AES-256-CBC encryption directly
+    // Generate a random key and IV for testing
+    $aesKey = openssl_random_pseudo_bytes(32);
+    $iv = openssl_random_pseudo_bytes(16);
     
-    if ($useAes) {
-        // Test AES-256-CBC encryption directly
-        // Generate a random key and IV for testing
-        $aesKey = openssl_random_pseudo_bytes(32);
-        $iv = openssl_random_pseudo_bytes(16);
-        
-        // Encrypt the data with AES-256-CBC
-        $encryptedXml = openssl_encrypt($testData, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
-        expect($encryptedXml)->not->toBeFalse();
-        
-        // Decrypt the data to verify it works
-        $decryptedXml = openssl_decrypt($encryptedXml, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
-        expect($decryptedXml)->toBe($testData);
-        
-        // Now test using our helper
-        $encryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::encrypt(
-            $testData,
-            $signature,
-            $publicKeyPath
-        );
-        
-        // Verify the encrypted data structure
-        expect($encryptedData)->toBeArray();
-        expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher', 'iv']);
-        expect($encryptedData['cipher'])->toBe('aes-256-cbc');
-        
-        // Verify the IV is present and properly encoded
-        expect(base64_decode($encryptedData['iv'], true))->not->toBeFalse();
-    } else {
-        // For RC4 encryption
-        $encryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::encrypt(
-            $testData,
-            $signature,
-            $publicKeyPath
-        );
-        
-        // Verify the encrypted data structure
-        expect($encryptedData)->toBeArray();
-        expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher']);
-        expect($encryptedData['cipher'])->toBeIn(['rc4', 'felix-rc4']);
-        
-        // Decrypt the data
-        $decryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::decrypt(
-            $encryptedData['env_key'],
-            $encryptedData['data'],
-            $signature,
-            $privateKeyPath,
-            $encryptedData['cipher']
-        );
-        
-        // Verify the decrypted data matches the original
-        expect($decryptedData)->toBe($testData);
-    }
+    // Encrypt the data with AES-256-CBC
+    $encryptedXml = openssl_encrypt($testData, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
+    expect($encryptedXml)->not->toBeFalse();
     
-    // Define success flag
-    $success = true;
+    // Decrypt the data to verify it works
+    $decryptedXml = openssl_decrypt($encryptedXml, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
+    expect($decryptedXml)->toBe($testData);
     
-    // At least one cipher should work
-    expect($success)->toBeTrue();
+    // Now test using our helper
+    $encryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::encrypt(
+        $testData,
+        $signature,
+        $publicKeyPath
+    );
+    
+    // Verify the encrypted data structure
+    expect($encryptedData)->toBeArray();
+    expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher', 'iv']);
+    expect($encryptedData['cipher'])->toBe('aes-256-cbc');
+    
+    // Verify the IV is present and properly encoded
+    expect(base64_decode($encryptedData['iv'], true))->not->toBeFalse();
+    
+    // Decrypt the data
+    $decryptedData = Aflorea4\NetopiaPayments\Helpers\NetopiaPaymentEncryption::decrypt(
+        $encryptedData['env_key'],
+        $encryptedData['data'],
+        $signature,
+        $privateKeyPath,
+        $encryptedData['cipher'],
+        $encryptedData['iv']
+    );
+    
+    // Verify the decrypted data matches the original
+    expect($decryptedData)->toBe($testData);
 });

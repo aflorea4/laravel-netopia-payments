@@ -136,23 +136,14 @@ it('verifies payment data structure with AES encryption', function () {
     expect($paymentData)->toBeArray();
     expect($paymentData)->toHaveKeys(['url', 'env_key', 'data', 'cipher']);
     
-    // Check if we're using AES-256-CBC (for PHP 7.0+)
-    if (PHP_VERSION_ID >= 70000 && OPENSSL_VERSION_NUMBER > 0x10000000) {
-        expect($paymentData['cipher'])->toBe('aes-256-cbc');
-        expect($paymentData)->toHaveKey('iv');
-        
-        // Verify the data is properly encoded
-        expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
-        expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
-        expect(base64_decode($paymentData['iv'], true))->not->toBeFalse();
-    } else {
-        // For older PHP versions, we should be using RC4
-        expect($paymentData['cipher'])->toBeIn(['rc4', 'felix-rc4']);
-        
-        // Verify the data is properly encoded
-        expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
-        expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
-    }
+    // Verify we're using AES-256-CBC
+    expect($paymentData['cipher'])->toBe('aes-256-cbc');
+    expect($paymentData)->toHaveKey('iv');
+    
+    // Verify the data is properly encoded
+    expect(base64_decode($paymentData['env_key'], true))->not->toBeFalse();
+    expect(base64_decode($paymentData['data'], true))->not->toBeFalse();
+    expect(base64_decode($paymentData['iv'], true))->not->toBeFalse();
     
     // Verify the URL is for the sandbox environment
     expect($paymentData['url'])->toContain('sandboxsecure.mobilpay.ro');
