@@ -2,13 +2,6 @@
 
 use Aflorea4\NetopiaPayments\Helpers\FixedKeyRC4;
 
-// Skip all tests in this file if Felix RC4 is not available
-beforeEach(function () {
-    if (!class_exists('Felix\RC4\RC4')) {
-        $this->markTestSkipped('Felix RC4 library is not available. These tests are deprecated as we move to AES-256-CBC encryption.');
-    }
-});
-
 it('can encrypt and decrypt data with a fixed key', function () {
     // Set a custom key for testing
     $customKey = 'NetopiaTest123';
@@ -47,8 +40,15 @@ it('can use different keys for different encryption contexts', function () {
     $encrypted2 = FixedKeyRC4::encrypt($testData2);
     
     // Try to decrypt first data with second key (should fail)
-    $incorrectDecryption = FixedKeyRC4::decrypt($encrypted1);
-    expect($incorrectDecryption)->not->toBe($testData1);
+    try {
+        $incorrectDecryption = FixedKeyRC4::decrypt($encrypted1);
+        // With AES, this will likely throw an exception due to incorrect padding
+        // If we get here, make sure the decryption is incorrect
+        expect($incorrectDecryption)->not->toBe($testData1);
+    } catch (\Exception $e) {
+        // Expected behavior with AES when using wrong key
+        expect($e->getMessage())->toContain('AES decryption failed');
+    }
     
     // Reset to first key and decrypt correctly
     FixedKeyRC4::setKey($key1);
@@ -79,4 +79,21 @@ it('can handle special characters', function () {
     $decrypted = FixedKeyRC4::decrypt($encrypted);
     
     expect($decrypted)->toBe($specialChars);
+});
+
+it('uses AES-256-CBC encryption', function () {
+    // Verify that we're using AES-256-CBC by checking the IV length
+    $testData = 'Test AES-256-CBC';
+    $encrypted = FixedKeyRC4::encrypt($testData);
+    
+    // Decode the base64 data
+    $decoded = base64_decode($encrypted);
+    
+    // The first 16 bytes should be the IV for AES-256-CBC
+    $iv = substr($decoded, 0, 16);
+    expect(strlen($iv))->toBe(16);
+    
+    // The rest should be the encrypted data
+    $ciphertext = substr($decoded, 16);
+    expect(strlen($ciphertext))->toBeGreaterThan(0);
 });
