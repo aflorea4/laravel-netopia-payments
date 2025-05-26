@@ -100,7 +100,7 @@ it('can generate a payment redirect URL for a 1.00 RON transaction', function ()
     expect($formHtml)->toContain($paymentData['cipher']);
 });
 
-it('can encrypt and decrypt payment data using supported encryption methods', function () {
+it('can encrypt and decrypt payment data using AES-256-CBC', function () {
     // Get the signature and key paths from the config
     $signature = Config::get('netopia.signature');
     $publicKeyPath = Config::get('netopia.public_key_path');
@@ -109,63 +109,21 @@ it('can encrypt and decrypt payment data using supported encryption methods', fu
     // Create test payment data
     $testData = '<?xml version="1.0" encoding="utf-8"?><order><signature>' . $signature . '</signature><amount>1.00</amount><currency>RON</currency></order>';
     
-    // Determine which cipher to use based on PHP version
-    $useAes = (PHP_VERSION_ID >= 70000 && OPENSSL_VERSION_NUMBER > 0x10000000);
+    // Test the NetopiaPaymentEncryption class
+    $encryptedData = NetopiaPaymentEncryption::encrypt($testData, $signature, $publicKeyPath);
     
-    if ($useAes) {
-        // Test AES-256-CBC encryption
-        // Generate a random key and IV for testing
-        $aesKey = openssl_random_pseudo_bytes(32);
-        $iv = openssl_random_pseudo_bytes(16);
-        
-        // Encrypt the data with AES-256-CBC
-        $encryptedXml = openssl_encrypt($testData, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
-        expect($encryptedXml)->not->toBeFalse();
-        
-        // Decrypt the data to verify it works
-        $decryptedXml = openssl_decrypt($encryptedXml, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
-        expect($decryptedXml)->toBe($testData);
-        
-        // For AES-256-CBC, just verify the encryption part works correctly
-        // since we've already verified the basic AES encryption/decryption above
-        $encryptedData = NetopiaPaymentEncryption::encrypt($testData, $signature, $publicKeyPath);
-        
-        // Verify the encrypted data structure
-        expect($encryptedData)->toBeArray();
-        expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher', 'iv']);
-        expect($encryptedData['cipher'])->toBe('aes-256-cbc');
-        
-        // Verify the IV is present and properly encoded
-        expect(base64_decode($encryptedData['iv'], true))->not->toBeFalse();
-        expect(base64_decode($encryptedData['data'], true))->not->toBeFalse();
-        expect(base64_decode($encryptedData['env_key'], true))->not->toBeFalse();
-        
-        // Since we've already verified AES works with the direct OpenSSL test above,
-        // and we've verified the structure of the encrypted data,
-        // we can consider this test successful
-    } else {
-        // Test RC4 encryption
-        $encryptedData = NetopiaPaymentEncryption::encrypt($testData, $signature, $publicKeyPath);
-        
-        // Verify the encrypted data structure
-        expect($encryptedData)->toBeArray();
-        expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher']);
-        expect($encryptedData['cipher'])->toBeIn(['felix-rc4', 'rc4']);
-        
-        // Decrypt the data
-        $decryptedData = NetopiaPaymentEncryption::decrypt(
-            $encryptedData['env_key'],
-            $encryptedData['data'],
-            $signature,
-            $privateKeyPath,
-            $encryptedData['cipher']
-        );
-        
-        // Verify the decrypted data matches the original
-        expect($decryptedData)->toBe($testData);
-    }
+    // Verify the structure of the encrypted data
+    expect($encryptedData)->toBeArray();
+    expect($encryptedData)->toHaveKeys(['env_key', 'data', 'cipher', 'iv']);
+    expect($encryptedData['cipher'])->toBe('aes-256-cbc');
     
-    // Test passed if we got here
+    // Verify that the data is properly base64 encoded
+    expect(base64_decode($encryptedData['iv'], true))->not->toBeFalse();
+    expect(base64_decode($encryptedData['data'], true))->not->toBeFalse();
+    expect(base64_decode($encryptedData['env_key'], true))->not->toBeFalse();
+    
+    // Test passed if we got here - we're not testing decryption directly
+    // as it's already tested in NetopiaAesEncryptionTest
     expect(true)->toBeTrue();
 });
 
@@ -217,8 +175,8 @@ it('verifies payment data format for a 1.00 RON transaction', function () {
     $decodedData = base64_decode($paymentData['data'], true);
     expect($decodedData)->not->toBeFalse();
     
-    // Verify that the cipher is one of the expected values
-    expect($paymentData['cipher'])->toBeIn(['rc4', 'felix-rc4', 'fixed-rc4', 'aes-256-cbc']);
+    // Verify that the cipher is AES-256-CBC
+    expect($paymentData['cipher'])->toBe('aes-256-cbc');
     
     // Simulate form submission by creating the form data array
     $formData = [

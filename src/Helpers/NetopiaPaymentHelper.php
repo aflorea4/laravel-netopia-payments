@@ -99,13 +99,14 @@ class NetopiaPaymentHelper
      * @param string $signature The Netopia merchant signature
      * @param string $privateKeyPath Path to the private key file
      * @param string $cipher The cipher used for encryption
+     * @param string|null $iv The initialization vector for AES (base64 encoded)
      * @return Response The payment response
      * @throws Exception
      */
-    public static function processResponse($envKey, $data, $signature, $privateKeyPath, $cipher = 'rc4')
+    public static function processResponse($envKey, $data, $signature, $privateKeyPath, $cipher = 'aes-256-cbc', $iv = null)
     {
         // Decrypt the data
-        $decryptedData = NetopiaPaymentEncryption::decrypt($envKey, $data, $signature, $privateKeyPath, $cipher);
+        $decryptedData = NetopiaPaymentEncryption::decrypt($envKey, $data, $signature, $privateKeyPath, $cipher, $iv);
 
         // Parse the XML
         $xmlDoc = new DOMDocument();
