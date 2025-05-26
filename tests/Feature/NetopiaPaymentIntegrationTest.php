@@ -61,6 +61,16 @@ beforeEach(function () {
         ->with('logging.channels.single')
         ->andReturn(['driver' => 'single', 'path' => storage_path('logs/laravel.log')]);
         
+    // Mock additional Config calls that might be needed in GitHub Actions
+    Config::shouldReceive('get')
+        ->with('logging.channels.deprecations')
+        ->andReturn(['driver' => 'null']);
+        
+    // Allow Config::set calls
+    Config::shouldReceive('set')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
     // Catch-all for any other config calls
     Config::shouldReceive('get')
         ->withAnyArgs()

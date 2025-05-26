@@ -17,6 +17,21 @@ beforeEach(function () {
     Config::shouldReceive('get')
         ->with('netopia.private_key_path')
         ->andReturn(TestHelper::getTestPrivateKeyPath());
+        
+    // Mock additional Config calls that might be needed in GitHub Actions
+    Config::shouldReceive('get')
+        ->with('logging.channels.deprecations')
+        ->andReturn(['driver' => 'null']);
+        
+    // Allow Config::set calls
+    Config::shouldReceive('set')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    // Catch-all for any other config calls
+    Config::shouldReceive('get')
+        ->withAnyArgs()
+        ->andReturnNull();
 });
 
 it('can encrypt data using the signature and public key', function () {

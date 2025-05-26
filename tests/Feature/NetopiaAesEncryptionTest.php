@@ -32,10 +32,20 @@ beforeEach(function () {
         ->with('netopia.default_currency', 'RON')
         ->andReturn('RON');
         
-    // Mock additional Config calls that might be needed
+    // Mock additional Config calls that might be needed in GitHub Actions
+    Config::shouldReceive('get')
+        ->with('logging.channels.deprecations')
+        ->andReturn(['driver' => 'null']);
+        
+    // Allow Config::set calls
+    Config::shouldReceive('set')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    // Catch-all for any other config calls
     Config::shouldReceive('get')
         ->withAnyArgs()
-        ->andReturn(null);
+        ->andReturnNull();
 });
 
 it('can encrypt and decrypt data using AES-256-CBC', function () {
