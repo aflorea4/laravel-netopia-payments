@@ -20,6 +20,44 @@ beforeEach(function () {
     Config::shouldReceive('get')
         ->with('netopia.private_key_path')
         ->andReturn(TestHelper::getTestPrivateKeyPath());
+        
+    // Mock additional Config calls that might be needed in GitHub Actions
+    Config::shouldReceive('get')
+        ->with('logging.channels.deprecations')
+        ->andReturn(['driver' => 'null']);
+        
+    // Allow Config::set calls
+    Config::shouldReceive('set')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    // Catch-all for any other config calls
+    Config::shouldReceive('get')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    // Mock the array access methods (offsetGet, offsetExists, etc.)
+    Config::shouldReceive('offsetGet')
+        ->withAnyArgs()
+        ->andReturnUsing(function ($key) {
+            if ($key === 'netopia.signature') return TestHelper::getTestSignature();
+            if ($key === 'netopia.public_key_path') return TestHelper::getTestPublicKeyPath();
+            if ($key === 'netopia.private_key_path') return TestHelper::getTestPrivateKeyPath();
+            if ($key === 'logging.channels.deprecations') return ['driver' => 'null'];
+            return null;
+        });
+        
+    Config::shouldReceive('offsetExists')
+        ->withAnyArgs()
+        ->andReturn(true);
+        
+    Config::shouldReceive('offsetSet')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    Config::shouldReceive('offsetUnset')
+        ->withAnyArgs()
+        ->andReturnNull();
 });
 
 it('can generate payment form data for a request', function () {

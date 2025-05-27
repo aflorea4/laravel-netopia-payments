@@ -76,13 +76,38 @@ beforeEach(function () {
         ->withAnyArgs()
         ->andReturn(null);
         
-    // Mock the Config array access
+    // Mock the Config array access with comprehensive key handling
     Config::shouldReceive('offsetGet')
+        ->withAnyArgs()
         ->andReturnUsing(function ($key) {
-            if ($key === 'logging.default') return 'stack';
+            if ($key === 'netopia.signature') return TestHelper::getTestSignature();
+            if ($key === 'netopia.public_key_path') return TestHelper::getTestPublicKeyPath();
+            if ($key === 'netopia.private_key_path') return TestHelper::getTestPrivateKeyPath();
+            if ($key === 'netopia.live_mode') return false;
+            if ($key === 'netopia.default_currency') return 'RON';
+            if ($key === 'app.name') return 'Laravel Netopia Test';
+            if ($key === 'app.debug') return true;
+            if ($key === 'app.url') return 'http://localhost';
             if ($key === 'app.asset_url') return null;
+            if ($key === 'logging.default') return 'stack';
+            if ($key === 'logging.channels.stack') return ['driver' => 'stack', 'channels' => ['single']];
+            if ($key === 'logging.channels.single') return ['driver' => 'single', 'path' => storage_path('logs/laravel.log')];
+            if ($key === 'logging.channels.deprecations') return ['driver' => 'null'];
             return null;
         });
+        
+    // Mock other array access methods
+    Config::shouldReceive('offsetExists')
+        ->withAnyArgs()
+        ->andReturn(true);
+        
+    Config::shouldReceive('offsetSet')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    Config::shouldReceive('offsetUnset')
+        ->withAnyArgs()
+        ->andReturnNull();
     
     // Define test routes that the controller will redirect to
     Route::get('/payment/success', function () {

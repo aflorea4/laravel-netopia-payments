@@ -46,6 +46,31 @@ beforeEach(function () {
     Config::shouldReceive('get')
         ->withAnyArgs()
         ->andReturnNull();
+        
+    // Mock the array access methods (offsetGet, offsetExists, etc.)
+    Config::shouldReceive('offsetGet')
+        ->withAnyArgs()
+        ->andReturnUsing(function ($key) {
+            if ($key === 'netopia.signature') return TestHelper::getTestSignature();
+            if ($key === 'netopia.public_key_path') return TestHelper::getTestPublicKeyPath();
+            if ($key === 'netopia.private_key_path') return TestHelper::getTestPrivateKeyPath();
+            if ($key === 'netopia.live_mode') return false;
+            if ($key === 'netopia.default_currency') return 'RON';
+            if ($key === 'logging.channels.deprecations') return ['driver' => 'null'];
+            return null;
+        });
+        
+    Config::shouldReceive('offsetExists')
+        ->withAnyArgs()
+        ->andReturn(true);
+        
+    Config::shouldReceive('offsetSet')
+        ->withAnyArgs()
+        ->andReturnNull();
+        
+    Config::shouldReceive('offsetUnset')
+        ->withAnyArgs()
+        ->andReturnNull();
 });
 
 it('can generate a payment redirect URL for a 1.00 RON transaction', function () {
