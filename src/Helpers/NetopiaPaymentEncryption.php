@@ -98,21 +98,16 @@ class NetopiaPaymentEncryption
      * @param string $data The encrypted data (base64 encoded)
      * @param string $signature The Netopia merchant signature
      * @param string $privateKeyPath Path to the private key file
-     * @param string $cipher The cipher used for encryption (should always be aes-256-cbc)
-     * @param string|null $iv The initialization vector for AES (base64 encoded)
+     * @param string $cipher The cipher used for encryption (always aes-256-cbc)
+     * @param string $iv The initialization vector for AES (base64 encoded)
      * @return string The decrypted data
      * @throws Exception
      */
-    public static function decrypt($envKey, $data, $signature, $privateKeyPath, $cipher = 'aes-256-cbc', $iv = null)
+    public static function decrypt($envKey, $data, $signature, $privateKeyPath, $cipher = 'aes-256-cbc', $iv)
     {
         // Verify that AES-256-CBC is available
         if (!in_array('aes-256-cbc', openssl_get_cipher_methods())) {
             throw new Exception('AES-256-CBC cipher is not available in this PHP installation');
-        }
-        
-        // Only support AES-256-CBC
-        if ($cipher !== 'aes-256-cbc') {
-            throw new Exception('Unsupported cipher: ' . $cipher . '. Only AES-256-CBC is supported.');
         }
         
         try {

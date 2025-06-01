@@ -300,7 +300,8 @@ class PaymentController extends Controller
             $response = NetopiaPayments::processResponse(
                 $request->input('env_key'),
                 $request->input('data'),
-                $request->input('iv') // The IV parameter is required for decryption
+                null,
+                $request->input('iv')
             );
 
             // Log the payment response
@@ -450,8 +451,12 @@ This approach doesn't use queues or event listeners, making it simpler for testi
 The package uses the following security measures:
 
 1. Request authentication using an API Signature included in the request
-2. Data encryption using RSA keys
+2. Data encryption using RSA keys with AES-256-CBC for symmetric encryption
 3. Secure Sockets Layer (SSL) data transport
+
+### Encryption Details
+
+As of version 0.2.6, this package exclusively uses AES-256-CBC encryption for all payment data. This provides stronger security compared to older cipher methods like RC4. When processing payments, the initialization vector (IV) parameter is now required for all decryption operations.
 
 ## Testing
 

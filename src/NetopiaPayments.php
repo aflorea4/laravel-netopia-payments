@@ -193,12 +193,11 @@ class NetopiaPayments
      *
      * @param string $envKey The envelope key
      * @param string $data The encrypted data
-     * @param string $cipher The cipher used for encryption
      * @param string|null $errorCode The error code if any
-     * @param string|null $iv The initialization vector (for AES-256-CBC)
+     * @param string $iv The initialization vector (required for AES-256-CBC)
      * @return Response The response object
      */
-    public function processResponse($envKey, $data, $cipher = 'rc4', $errorCode = null, $iv = null)
+    public function processResponse($envKey, $data, $errorCode = null, $iv = null)
     {
         $response = new Response();
         
@@ -209,13 +208,13 @@ class NetopiaPayments
         }
         
         try {
-            // Decrypt the data
+            // Decrypt the data using AES-256-CBC
             $decryptedData = NetopiaPaymentEncryption::decrypt(
                 $envKey,
                 $data,
                 $this->signature,
                 $this->privateKeyPath,
-                $cipher,
+                'aes-256-cbc',
                 $iv
             );
             

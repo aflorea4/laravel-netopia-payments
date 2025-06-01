@@ -36,20 +36,18 @@ class NetopiaPaymentController extends Controller
             ]);
             
             // Validate required parameters
-            if (empty($envKey) || empty($data)) {
+            if (empty($envKey) || empty($data) || empty($iv)) {
                 Log::warning('Netopia payment confirmation missing parameters', [
                     'request_id' => uniqid(),
                     'has_env_key' => !empty($envKey),
                     'has_data' => !empty($data),
+                    'has_iv' => !empty($iv),
                 ]);
                 throw new Exception('Missing required parameters for payment processing');
             }
             
-            // Get the cipher parameter if provided
-            $cipher = $request->input('cipher', 'RC4');
-
-            // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data, $cipher, $iv);
+            // Process the payment response using AES-256-CBC
+            $response = NetopiaPayments::processResponse($envKey, $data, null, $iv);
 
             // Log the payment response
             Log::info('Netopia payment response', [
@@ -119,20 +117,18 @@ class NetopiaPaymentController extends Controller
             ]);
             
             // Validate required parameters
-            if (empty($envKey) || empty($data)) {
+            if (empty($envKey) || empty($data) || empty($iv)) {
                 Log::warning('Netopia payment return missing parameters', [
                     'request_id' => uniqid(),
                     'has_env_key' => !empty($envKey),
                     'has_data' => !empty($data),
+                    'has_iv' => !empty($iv),
                 ]);
                 throw new Exception('Missing required parameters for payment processing');
             }
             
-            // Get the cipher parameter if provided
-            $cipher = $request->input('cipher', 'RC4');
-
-            // Process the payment response
-            $response = NetopiaPayments::processResponse($envKey, $data, $cipher, $iv);
+            // Process the payment response using AES-256-CBC
+            $response = NetopiaPayments::processResponse($envKey, $data, null, $iv);
 
             // Redirect based on the payment status
             if ($response->isSuccessful() || $response->isPaid()) {
