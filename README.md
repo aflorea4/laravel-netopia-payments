@@ -66,6 +66,40 @@ NETOPIA_LIVE_MODE=false
 NETOPIA_DEFAULT_CURRENCY=RON
 ```
 
+## Verifying Your Certificate and Private Key
+
+Before using the package in production, it's important to verify that your certificate and private key are valid and working correctly. You can use the following commands to check them:
+
+### Verify the Public Certificate
+
+```bash
+openssl x509 -in /path/to/your/public.cer -text -noout
+```
+
+This command should display information about your certificate, including the issuer, validity period, and public key details. If the command returns an error, your certificate may be invalid or corrupted.
+
+### Verify the Private Key
+
+```bash
+openssl rsa -in /path/to/your/private.key -check
+```
+
+This command should display "RSA key ok" if your private key is valid. If it asks for a password, your key may be password-protected, which is not supported by this package.
+
+### Test Key Pair Matching
+
+To verify that your public certificate and private key are a matching pair (which is essential for encryption/decryption to work):
+
+```bash
+# Extract the modulus from the certificate
+openssl x509 -in /path/to/your/public.cer -noout -modulus | md5sum
+
+# Extract the modulus from the private key
+openssl rsa -in /path/to/your/private.key -noout -modulus | md5sum
+```
+
+Both commands should produce the same MD5 hash. If they don't match, your certificate and private key are not a valid pair, which will cause encryption/decryption failures.
+
 ## Usage
 
 ### Creating a Payment Request
@@ -94,11 +128,12 @@ $paymentData = NetopiaPayments::createPaymentRequest(
 // The payment data contains:
 // - env_key: The encrypted envelope key (REQUIRED)
 // - data: The encrypted payment data (REQUIRED)
-// - cipher: The cipher algorithm used for encryption (REQUIRED, defaults to 'RC4')
+// - cipher: The cipher algorithm used for encryption (REQUIRED, defaults to 'aes-256-cbc')
+// - iv: The initialization vector for AES encryption (REQUIRED when using aes-256-cbc)
 // - url: The payment URL (sandbox or live)
 //
-// IMPORTANT: Both parameters (env_key and data) must be included in your payment form
-// submission to Netopia. The cipher parameter should be set to 'RC4' to match Netopia's implementation.
+// IMPORTANT: All parameters (env_key, data, cipher, and iv) must be included in your payment form
+// submission to Netopia. The cipher parameter should be set to 'aes-256-cbc' for modern implementations.
 
 // Redirect to the payment page
 return view('payment.redirect', [
@@ -121,13 +156,14 @@ Create a view file `resources/views/payment/redirect.blade.php`:
     <p>Please wait while we redirect you to the payment page.</p>
 
     <form id="netopiaForm" action="{{ $paymentData['url'] }}" method="post">
-      <!-- All three parameters are required for successful payment processing -->
       <input
         type="hidden"
         name="env_key"
         value="{{ $paymentData['env_key'] }}"
       />
       <input type="hidden" name="data" value="{{ $paymentData['data'] }}" />
+      <input type="hidden" name="cipher" value="{{ $paymentData['cipher'] ?? 'aes-256-cbc' }}" />
+      <input type="hidden" name="iv" value="{{ $paymentData['iv'] ?? '' }}" />
       <button type="submit" style="display: none;">Pay Now</button>
     </form>
 
