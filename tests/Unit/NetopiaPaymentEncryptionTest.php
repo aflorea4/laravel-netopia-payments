@@ -123,7 +123,7 @@ it('can decrypt data using the signature and private key', function () {
             $encryptedResult['data'],
             $signature,
             $privateKeyPath,
-            $encryptedResult['cipher'],
+            null,
             $encryptedResult['iv']
         );
         
@@ -153,7 +153,7 @@ it('handles AES-256-CBC encryption correctly', function () {
             $encryptedResult['data'],
             $signature,
             $privateKeyPath,
-            'aes-256-cbc',
+            null,
             $encryptedResult['iv']
         );
         

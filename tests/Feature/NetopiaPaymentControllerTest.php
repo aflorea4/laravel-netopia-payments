@@ -17,7 +17,7 @@ it('handles confirm request and returns success response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn(createSuccessfulResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -31,7 +31,6 @@ it('handles confirm request and returns success response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -50,7 +49,7 @@ it('handles confirm request and returns pending response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn(createPendingResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -64,7 +63,6 @@ it('handles confirm request and returns pending response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -83,7 +81,7 @@ it('handles confirm request and returns canceled response', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn(createCanceledResponse());
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -97,7 +95,6 @@ it('handles confirm request and returns canceled response', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -116,7 +113,7 @@ it('handles error in confirm request', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andThrow(new Exception('Test error'));
     
     NetopiaPayments::shouldReceive('generatePaymentResponse')
@@ -127,7 +124,6 @@ it('handles error in confirm request', function () {
     $request = Request::create('/netopia/confirm', 'POST', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     

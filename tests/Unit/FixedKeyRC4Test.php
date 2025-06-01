@@ -2,6 +2,12 @@
 
 use Aflorea4\NetopiaPayments\Helpers\FixedKeyRC4;
 
+/**
+ * Note: As of v0.2.6, this class internally uses AES-256-CBC encryption instead of RC4.
+ * The class name is kept for backward compatibility, but all encryption/decryption
+ * operations now use AES-256-CBC.
+ */
+
 it('can encrypt and decrypt data with a fixed key', function () {
     // Set a custom key for testing
     $customKey = 'NetopiaTest123';

@@ -27,14 +27,13 @@ it('handles return request and redirects to success page', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn(createSuccessfulResponse());
     
     // Create a mock request
     $request = Request::create('/netopia/return', 'GET', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -50,14 +49,13 @@ it('handles return request and redirects to pending page', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn(createPendingResponse());
     
     // Create a mock request
     $request = Request::create('/netopia/return', 'GET', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -80,14 +78,13 @@ it('handles return request and redirects to failed page', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andReturn($failedResponse);
     
     // Create a mock request
     $request = Request::create('/netopia/return', 'GET', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
@@ -104,14 +101,13 @@ it('handles error in return request', function () {
     // Mock the NetopiaPayments facade
     NetopiaPayments::shouldReceive('processResponse')
         ->once()
-        ->with('test-env-key', 'test-data', 'felix-rc4', 'test-iv')
+        ->with('test-env-key', 'test-data', null, 'test-iv')
         ->andThrow(new Exception('Test error'));
     
     // Create a mock request
     $request = Request::create('/netopia/return', 'GET', [
         'env_key' => 'test-env-key',
         'data' => 'test-data',
-        'cipher' => 'felix-rc4',
         'iv' => 'test-iv',
     ]);
     
