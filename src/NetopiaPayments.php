@@ -178,12 +178,8 @@ class NetopiaPayments
             'env_key' => $encryptedData['env_key'],
             'data' => $encryptedData['data'],
             'cipher' => $encryptedData['cipher'],
+            'iv' => $encryptedData['iv'],
         ];
-        
-        // Add IV if using AES-256-CBC
-        if ($encryptedData['cipher'] === 'aes-256-cbc' && isset($encryptedData['iv'])) {
-            $result['iv'] = $encryptedData['iv'];
-        }
         
         return $result;
     }
