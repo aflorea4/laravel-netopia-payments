@@ -105,7 +105,7 @@ Both commands should produce the same MD5 hash. If they don't match, your certif
 ### Creating a Payment Request
 
 ```php
-use YourUsername\NetopiaPayments\Facades\NetopiaPayments;
+use Aflorea4\NetopiaPayments\Facades\NetopiaPayments;
 
 // Create a payment request
 $paymentData = NetopiaPayments::createPaymentRequest(
@@ -186,9 +186,9 @@ The package automatically registers routes for handling payment notifications:
 You can listen for the following events to handle payment notifications:
 
 ```php
-use YourUsername\NetopiaPayments\Events\NetopiaPaymentConfirmed;
-use YourUsername\NetopiaPayments\Events\NetopiaPaymentPending;
-use YourUsername\NetopiaPayments\Events\NetopiaPaymentCanceled;
+use Aflorea4\NetopiaPayments\Events\NetopiaPaymentConfirmed;
+use Aflorea4\NetopiaPayments\Events\NetopiaPaymentPending;
+use Aflorea4\NetopiaPayments\Events\NetopiaPaymentCanceled;
 
 // In your EventServiceProvider.php
 protected $listen = [
@@ -209,7 +209,7 @@ protected $listen = [
 ```php
 namespace App\Listeners;
 
-use YourUsername\NetopiaPayments\Events\NetopiaPaymentConfirmed;
+use Aflorea4\NetopiaPayments\Events\NetopiaPaymentConfirmed;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Queue\InteractsWithQueue;
 use App\Models\Order;
