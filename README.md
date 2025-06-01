@@ -183,6 +183,8 @@ The package automatically registers routes for handling payment notifications:
 - `POST /netopia/confirm` - For Instant Payment Notifications (IPN)
 - `GET /netopia/return` - For redirecting the user after payment
 
+These routes are handled by the package's internal controller and will dispatch events that you can listen for in your application. You don't need to create these routes yourself.
+
 You can listen for the following events to handle payment notifications:
 
 ```php
@@ -397,9 +399,23 @@ class PaymentController extends Controller
 ```php
 // routes/web.php
 Route::get('/payment/initiate', [PaymentController::class, 'initiatePayment'])->name('payment.initiate');
+```
+
+**Note about routes:**
+The example below registers custom routes for payment confirmation and return:
+
+```php
+// Custom routes if you want to handle payment processing in your own controller
 Route::post('/payment/confirm', [PaymentController::class, 'confirmPayment'])->name('payment.confirm');
 Route::get('/payment/return', [PaymentController::class, 'returnFromPayment'])->name('payment.return');
 ```
+
+These custom routes are different from the auto-registered package routes (`/netopia/confirm` and `/netopia/return`). Use custom routes when:
+1. You want complete control over the payment flow
+2. You need custom logic that isn't covered by the event listeners
+3. You're not using the package's event system
+
+If you're using the package's event system, you can use the auto-registered routes instead.
 
 ### 3. Create the Necessary Views
 
