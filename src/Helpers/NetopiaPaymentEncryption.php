@@ -45,40 +45,33 @@ class NetopiaPaymentEncryption
                 throw new Exception('Could not load public key: ' . openssl_error_string());
             }
             
-            // Generate a random IV (16 bytes for AES-256-CBC)
-            $iv = openssl_random_pseudo_bytes(16);
-            if ($iv === false) {
-                throw new Exception('Failed to generate secure random IV');
-            }
+            // Initialize IV as null - openssl_seal will generate it
+            $iv = null;
             
-            // Generate a random key for AES (32 bytes for AES-256-CBC)
-            $aesKey = openssl_random_pseudo_bytes(32); // 256 bits
-            if ($aesKey === false) {
-                throw new Exception('Failed to generate secure random AES key');
-            }
+            // Prepare the public keys array for openssl_seal
+            $publicKeys = [$publicKey];
             
-            // Note: We're not strictly validating the key length here as it may vary across environments
-            // The openssl_encrypt function will handle the key appropriately
+            // Use openssl_seal for encryption (similar to Netopia's implementation)
+            // This will encrypt the data and automatically generate an IV
+            $encryptedData = null;
+            $envKeys = null;
+            $result = openssl_seal($data, $encryptedData, $envKeys, $publicKeys, $cipher, $iv);
             
-            // Encrypt data with AES
-            $encryptedData = openssl_encrypt($data, 'aes-256-cbc', $aesKey, OPENSSL_RAW_DATA, $iv);
-            if ($encryptedData === false) {
-                throw new Exception('AES encryption failed: ' . openssl_error_string());
-            }
-            
-            // Encrypt the AES key with the public key
-            $encryptedKey = '';
-            if (!openssl_public_encrypt($aesKey, $encryptedKey, $publicKey, OPENSSL_PKCS1_PADDING)) {
-                throw new Exception('Failed to encrypt AES key: ' . openssl_error_string());
+            if ($result === false) {
+                $errorMessage = "Error while encrypting data! Reason:";
+                while (($errorString = openssl_error_string())) {
+                    $errorMessage .= $errorString . "\n";
+                }
+                throw new Exception($errorMessage);
             }
             
             // Free the key
             @openssl_free_key($publicKey);
             
             // Base64 encode all binary data for safe transmission
-            $base64EnvKey = base64_encode($encryptedKey);
+            $base64EnvKey = base64_encode($envKeys[0]);
             $base64Data = base64_encode($encryptedData);
-            $base64Iv = base64_encode($iv);
+            $base64Iv = base64_encode($iv); // IV is now populated by openssl_seal
             
             return [
                 'env_key' => $base64EnvKey,

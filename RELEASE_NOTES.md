@@ -1,4 +1,19 @@
-# Release Notes for v0.2.6
+# Release Notes
+
+This document contains the release notes for the Laravel Netopia Payments package.
+
+## Version 0.2.8 (2025-06-01)
+
+### Encryption Implementation Enhancement
+
+This release improves the encryption implementation to better align with Netopia's official approach:
+
+- Updated the encryption method to use `openssl_seal()` for both symmetric and asymmetric encryption
+- Let OpenSSL automatically generate the initialization vector (IV) during encryption
+- Maintained exclusive use of AES-256-CBC for all encryption operations
+- Ensured IV is always included in payment form data
+
+These changes improve compatibility with Netopia's payment processing system while maintaining the security benefits of using AES-256-CBC encryption.
 
 ## Security Enhancement: AES-256-CBC Encryption
 

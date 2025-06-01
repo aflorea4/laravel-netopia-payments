@@ -2,6 +2,18 @@
 
 All notable changes to `laravel-netopia-payments` will be documented in this file.
 
+## 0.2.8 - 2025-06-01
+
+- **ENHANCEMENT**: Updated encryption implementation to match Netopia's official approach
+- Improved compatibility with Netopia's payment processing system
+- Optimized AES-256-CBC encryption by using `openssl_seal()` for both symmetric and asymmetric encryption
+- Ensured IV is always included in payment form data
+
+## 0.2.7 - 2025-06-01
+
+- **SECURITY**: Fixed IV handling in payment form generation
+- Always include IV parameter in payment form data for AES-256-CBC encryption
+
 ## 0.2.6 - 2025-06-01
 
 - **SECURITY ENHANCEMENT**: Package now exclusively uses AES-256-CBC encryption/decryption
