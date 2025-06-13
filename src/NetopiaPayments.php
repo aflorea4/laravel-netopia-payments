@@ -130,6 +130,10 @@ class NetopiaPayments
         $signatureElem = $xmlDoc->createElement('signature', $request->signature);
         $orderElem->appendChild($signatureElem);
 
+        // Add cipher
+        $cipherElem = $xmlDoc->createElement('cipher', 'aes-256-cbc');
+        $orderElem->appendChild($cipherElem);
+
         // Add invoice
         $invoiceElem = $xmlDoc->createElement('invoice');
         $invoiceElem->setAttribute('currency', $request->invoice->currency);
